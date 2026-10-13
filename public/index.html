@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ခရီးသည် တည်နေရာမျှဝေရန်</title>
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <h2>ခရီးသည် တည်နေရာပေးပို့ခြင်း</h2>
+    <p id="status">ချိတ်ဆက်နေပါပြီ...</p>
+
+    <script>
+        const socket = io();
+        const statusEl = document.getElementById('status');
+
+        if (navigator.geolocation) {
+            navigator.geolocation.watchPosition((position) => {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                
+                statusEl.innerText = `တည်နေရာရယူပြီး - Lat: ${lat}, Lon: ${lon}`;
+                
+                socket.emit('passenger-location', { lat, lon });
+            }, (error) => {
+                statusEl.innerText = 'တည်နေရာ ရယူ၍မရပါ: ' + error.message;
+            }, { enableHighAccuracy: true });
+        } else {
+            statusEl.innerText = 'ဒီဖုန်းက Geolocation ကို မထောက်ပံ့ပါ။';
+        }
+    </script>
+</body>
+</html>
