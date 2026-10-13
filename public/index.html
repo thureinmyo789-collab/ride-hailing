@@ -61,7 +61,11 @@
             } else {
                 alert("Geolocation is not supported by this browser.");
             }
-        }
+        }// Socket.io ဖြင့် ယာဉ်မောင်းလက်ခံမှုကို စောင့်ဆိုင်းခြင်း
+socket.on('rideAccepted', (data) => {
+    alert('သင်၏ ခေါ်ဆိုမှုကို ယာဉ်မောင်းမှ လက်ခံရရှိပါပြီ!');
+    document.getElementById('status').innerText = "ယာဉ်မောင်း လာနေပါပြီ";
+});
     </script>
 </body>
 </html>
