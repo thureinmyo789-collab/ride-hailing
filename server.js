@@ -11,11 +11,13 @@ app.use(express.static('public'));
 io.on('connection', (socket) => {
     console.log('ချိတ်ဆက်မှု ရရှိပါပြီ ID: ' + socket.id);
 
-    socket.on('passenger-location', (data) => {
-        io.emit('update-driver-map', data);
+    // ခရီးသည်ဘက်မှ ပို့လိုက်သော liveLocationUpdate ကို လက်ခံရယူခြင်း
+    socket.on('liveLocationUpdate', (data) => {
+        // ယာဉ်မောင်းများနှင့် အခြားချိတ်ဆက်ထားသူများထံသို့ ပြန်လည်ထုတ်လွှင့်ခြင်း
+        io.emit('liveLocationUpdate', data);
     });
 
-    socket.on('disconnect', () => {
+        socket.on('disconnect', () => {
         console.log('ချိတ်ဆက်မှု ပြတ်တောက်သွားပါပြီ');
     });
 });
