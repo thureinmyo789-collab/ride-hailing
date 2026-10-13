@@ -67,7 +67,27 @@
 socket.on('rideAccepted', (data) => {
     alert('သင်၏ ခေါ်ဆိုမှုကို ယာဉ်မောင်းမှ လက်ခံရရှိပါပြီ!');
     document.getElementById('status').innerText = "ယာဉ်မောင်း လာနေပါပြီ";
-});
+});let routingControl = null;
+
+if (typeof marker !== 'undefined' && marker) {
+    marker.on('click', function() {
+        socket.emit('acceptRide', { passengerId: 'some_id', status: 'accepted' });
+        alert('ခရီးသည်ကို လက်ခံလိုက်ပါပြီ။ လမ်းကြောင်း စတင်ပြသနေပါပြီ။');
+
+        if (routingControl) {
+            map.removeControl(routingControl);
+        }
+        
+        routingControl = L.Routing.control({
+            waypoints: [
+                L.latLng(driverLat, driverLng), 
+                L.latLng(passengerLat, passengerLng) 
+            ],
+            routeWhileDragging: false,
+            language: 'my'
+        }).addTo(map);
+    });
+}
     </script>
 </body>
 </html>
