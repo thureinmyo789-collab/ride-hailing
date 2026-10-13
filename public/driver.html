@@ -1,15 +1,16 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="my">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Driver Dashboard</title>
     <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         #map { height: 100vh; width: 100%; }
         body { margin: 0; padding: 0; font-family: sans-serif; }
-        .info-box { position: absolute; top: 10px; right: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+        .info-box { position: absolute; top: 10px; right: 10px; z-index: 1000; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+        #status { font-weight: bold; color: #007bff; margin-top: 5px; }
     </style>
 </head>
 <body>
@@ -20,12 +21,12 @@
     <div id="map"></div>
 
     <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <!-- Socket.io -->
     <script src="/socket.io/socket.io.js"></script>
     <script>
         // Map Initialize
-        var map = L.map('map').setView([21.67, 100.02], 15);
+        var map = L.map('map').setView([21.9833, 100.0833], 15);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
         }).addTo(map);
@@ -33,20 +34,36 @@
         var marker = null;
         var socket = io();
 
-        // ခရီးသည်ဘက်မှ ပို့လိုက်သော တည်နေရာကို လက်ခံရယူခြင်း
-        socket.on('locationUpdate', function(data) {
+        // အချက်ပေးအသံ (Beep)
+        function playBeep() {
+            try {
+                let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                let osc = audioCtx.createOscillator();
+                let gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(900, audioCtx.currentTime);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.4);
+            } catch(e) {}
+        }
+
+        // ခရီးသည်ဘက်မှ ပို့လိုက်သော တည်နေရာကို လက်ခံရယူခြင်း (Event name ကို match လုပ်ထားသည်)
+        socket.on('liveLocationUpdate', function(data) {
+            playBeep();
             console.log("Received location:", data);
             var lat = data.lat;
-            var lon = data.lon;
+            var lng = data.lng; // index.html တွင် lng ဟုသုံးထားသဖြင့် lng သုံးရန်
 
-            document.getElementById('status').innerText = `Lat: ${lat.toFixed(5)}, Lon: ${lon.toFixed(5)}`;
+            document.getElementById('status').innerText = `Lat: ${lat.toFixed(5)}, Lng: ${lng.toFixed(5)}`;
 
-            if (marker) {
-                marker.setLatLng([lat, lon]);
+            if (!marker) {
+                marker = L.marker([lat, lng]).addTo(map).bindPopup("ခရီးသည်ရှိရာနေရာ").openPopup();
             } else {
-                marker = L.marker([lat, lon]).addTo(map);
+                marker.setLatLng([lat, lng]);
             }
-            map.setView([lat, lon], map.getZoom());
+            map.setView([lat, lng], 16);
         });
     </script>
 </body>
