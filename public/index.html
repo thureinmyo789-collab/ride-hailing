@@ -3,31 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ခရီးသည် တည်နေရာမျှဝေရန်</title>
-    <script src="/socket.io/socket.io.js"></script>
+    <title>ခရီးသည် တည်နေရာပေးပို့ခြင်း</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { font-family: sans-serif; margin: 0; padding: 0; background: #f9f9f9; text-align: center; }
+        #map { height: 60vh; width: 100%; }
+        .panel { padding: 15px; background: #fff; }
+        button { padding: 12px 20px; font-size: 16px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        #status { font-weight: bold; margin-top: 10px; color: #333; }
+    </style>
 </head>
 <body>
-    <h2>ခရီးသည် တည်နေရာပေးပို့ခြင်း</h2>
-    <p id="status">ချိတ်ဆက်နေပါပြီ...</p>
 
+    <div id="map"></div>
+
+    <div class="panel">
+        <button onclick="startSharing()">တည်နေရာ စတင်မျှဝေမည်</button>
+        <div id="status">အခြေအနေ: တည်နေရာ မျှဝေရန် ခလုတ်ကို နှိပ်ပါ</div>
+    </div>
+
+    <!-- Socket.io နှင့် Leaflet JS -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         const socket = io();
-        const statusEl = document.getElementById('status');
+        var map = L.map('map').setView([21.9833, 100.0833], 15);
 
-        if (navigator.geolocation) {
-            navigator.geolocation.watchPosition((position) => {
-                const lat = position.coords.latitude;
-                const lon = position.coords.longitude;
-                
-                statusEl.innerText = `တည်နေရာရယူပြီး - Lat: ${lat}, Lon: ${lon}`;
-                
-                socket.emit('passenger-location', { lat, lon });
-            }, (error) => {
-                statusEl.innerText = 'တည်နေရာ ရယူ၍မရပါ: ' + error.message;
-            }, { enableHighAccuracy: true });
-        } else {
-            statusEl.innerText = 'ဒီဖုန်းက Geolocation ကို မထောက်ပံ့ပါ။';
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+        }).addTo(map);
+
+        var marker = null;
+        let passengerId = "p_" + Math.random().toString(36).substring(7);
+
+        function startSharing() {
+            document.getElementById('status').innerText = "အခြေအနေ: တည်နေရာ မျှဝေနေပါပြီ...";
+            
+            if (navigator.geolocation) {
+                navigator.geolocation.watchPosition(function(pos) {
+                    let lat = pos.coords.latitude;
+                    let lng = pos.coords.longitude;
+
+                    // ယာဉ်မောင်းဘက်သို့ liveLocationUpdate ဖြင့် တည်နေရာ ပို့မည်
+                    socket.emit('liveLocationUpdate', { passengerId: passengerId, lat: lat, lng: lng });
+
+                    document.getElementById('status').innerText = `တည်နေရာရယူပြီး - Lat: ${lat.toFixed(5)}, Lng: ${lng.toFixed(5)}`;
+
+                    if (!marker) {
+                        marker = L.marker([lat, lng]).addTo(map).bindPopup("သင့်တည်နေရာ").openPopup();
+                    } else {
+                        marker.setLatLng([lat, lng]);
+                    }
+                    map.setView([lat, lng], 16);
+                }, (err) => {
+                    alert("Location ရယူ၍မရပါ။ GPS ဖွင့်ထားပါ။");
+                }, { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 });
+            } else {
+                alert("Geolocation is not supported by this browser.");
+            }
         }
     </script>
 </body>
 </html>
+
