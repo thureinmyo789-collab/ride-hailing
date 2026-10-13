@@ -64,7 +64,34 @@
                 marker.setLatLng([lat, lng]);
             }
             map.setView([lat, lng], 16);
-        });
+        });let routingControl = null;
+
+// ခရီးသည် marker ပေါ်လာပြီး နှိပ်သည့်အခါ လမ်းကြောင်းပြရန်
+if (typeof passengerMarker !== 'undefined' && passengerMarker) {
+    passengerMarker.on('click', function() {
+        socket.emit('acceptRide', { driverId: socket.id });
+        alert('ခေါ်ဆိုမှုကို လက်ခံလိုက်ပါပြီ။ လမ်းကြောင်း စတင်ပြသနေပါပြီ။');
+
+        // ယာဉ်မောင်း လက်ရှိနေရာ (သို့မဟုတ် ယာဉ်မောင်း GPS နေရာကို ယူသုံးရန်)
+        let driverLat = 21.67184; // လိုအပ်ပါက မိမိလက်ရှိ lat ထည့်ရန်
+        let driverLng = 100.02042; // လိုအပ်ပါက မိမိလက်ရှိ lng ထည့်ရန်
+
+        let pLatLng = passengerMarker.getLatLng();
+
+        if (routingControl) {
+            map.removeControl(routingControl);
+        }
+        
+        routingControl = L.Routing.control({
+            waypoints: [
+                L.latLng(driverLat, driverLng), 
+                L.latLng(pLatLng.lat, pLatLng.lng) 
+            ],
+            routeWhileDragging: false,
+            language: 'my'
+        }).addTo(map);
+    });
+}
     </script>
 </body>
 </html>
