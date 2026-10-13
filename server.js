@@ -15,8 +15,10 @@ io.on('connection', (socket) => {
     socket.on('liveLocationUpdate', (data) => {
         // ယာဉ်မောင်းများနှင့် အခြားချိတ်ဆက်ထားသူများထံသို့ ပြန်လည်ထုတ်လွှင့်ခြင်း
         io.emit('liveLocationUpdate', data);
+    });    // ယာဉ်မောင်းက ခေါ်ဆိုမှုကို လက်ခံလိုက်သည့်အခါ
+    socket.on('acceptRide', (data) => {
+        io.emit('rideAccepted', data);
     });
-
         socket.on('disconnect', () => {
         console.log('ချိတ်ဆက်မှု ပြတ်တောက်သွားပါပြီ');
     });
