@@ -98,6 +98,38 @@ if (typeof passengerMarker !== 'undefined' && passengerMarker) {
         }).addTo(map);
     });
 }
+// ခရီးသည်တည်နေရာ လက်ခံရရှိသည့်အခါ မားကာပြသခြင်းနှင့် နှိပ်၍လက်ခံခြင်း
+socket.on('liveLocationUpdate', (data) => {
+    var passengerLat = data.lat;
+    var passengerLng = data.lng;
+
+    // ခရီးသည်အတွက် မားကာပြသရန်
+    var passengerMarker = L.marker([passengerLat, passengerLng]).addTo(map)
+        .bindPopup("<b>ခရီးသည် တည်နေရာ</b><br>နှိပ်၍ ခရီးစဉ်ကို လက်ခံပါ။").openPopup();
+
+    // မားကာကို နှိပ်လိုက်သောအခါ ယာဉ်မောင်းမှ ခရီးစဉ်လက်ခံခြင်း
+    passengerMarker.on('click', () => {
+        // ဆာဗာသို့ rideAccepted / acceptRide ပို့ရန်
+        socket.emit('acceptRide', { driverId: socket.id, message: 'ယာဉ်မောင်းမှ ခရီးစဉ်ကို လက်ခံလိုက်ပါပြီ။' });
+
+        // လမ်းကြောင်းပြစနစ် (Leaflet Routing Machine) စတင်ရန်
+        // (ယာဉ်မောင်းလက်ရှိနေရာမှ ခရီးသည်နေရာသို့)
+        if (typeof L.Routing !== 'undefined') {
+            L.Routing.control({
+                waypoints: [
+                    L.latLng(currentDriverLat, currentDriverLng), // ယာဉ်မောင်းလက်ရှိနေရာ
+                    L.latLng(passengerLat, passengerLng)        // ခရီးသည်နေရာ
+                ],
+                routeWhileDragging: true
+            }).addTo(map);
+        }
+    });
+});
+
+// ခရီးသည်ဘက်တွင် ယာဉ်မောင်းလက်ခံကြောင်း ပြသရန်
+socket.on('rideAccepted', (data) => {
+    alert(data.message);
+});
     </script>
 </body>
 </html>
