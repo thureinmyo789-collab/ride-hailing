@@ -3,20 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Passenger App</title>
+    <title>ခရီးသည် တည်နေရာပို့ပေးခြင်း</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        #map { height: 80vh; width: 100%; }
-        body { margin: 0; padding: 0; font-family: sans-serif; text-align: center; }
-        .btn { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; margin: 10px; }
-        #status { font-weight: bold; color: #333; margin: 10px; }
+        body { font-family: sans-serif; margin: 0; padding: 0; text-align: center; }
+        #map { height: 70vh; width: 100%; }
+        .panel { padding: 15px; background: #fff; }
+        button { padding: 12px 20px; font-size: 16px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        #status { font-weight: bold; margin-top: 10px; color: #333; }
+        #coords { font-size: 14px; color: #555; margin-top: 5px; }
     </style>
 </head>
 <body>
-    <h2>ခရီးသည် တည်နေရာပြ စနစ်</h2>
-    <p id="status">တည်နေရာ စတင်ရှာဖွေနေသည်...</p>
-    <button class="btn" onclick="sendLocation()">တည်နေရာ စတင်မျှဝေမည်</button>
+
     <div id="map"></div>
+
+    <div class="panel">
+        <button onclick="startSharing()">တည်နေရာ စတင်မျှဝေမည်</button>
+        <div id="status">အခြေအနေ: တည်နေရာ မပို့ရသေးပါ</div>
+        <div id="coords">Lat: -, Lng: -</div>
+    </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="/socket.io/socket.io.js"></script>
@@ -28,7 +34,6 @@
         var socket = io();
         var myMarker = null;
         var driverMarker = null;
-        var watchId = null;
 
         function playAlertVoice(text) {
             if ('speechSynthesis' in window) {
@@ -39,10 +44,10 @@
             }
         }
 
-        function sendLocation() {
+        function startSharing() {
             if (navigator.geolocation) {
-                document.getElementById('status').innerText = "တည်နေရာ မျှဝေနေပါပြီ...";
-                watchId = navigator.geolocation.watchPosition((position) => {
+                document.getElementById('status').innerText = "အခြေအနေ: တည်နေရာ ယူနေပါပြီ...";
+                navigator.geolocation.watchPosition((position) => {
                     var lat = position.coords.latitude;
                     var lng = position.coords.longitude;
 
@@ -53,22 +58,21 @@
                         myMarker.setLatLng([lat, lng]);
                     }
 
-                    // ဆာဗာသို့ တည်နေရာ အဉ်တိတ်ပို့ခြင်း (Background မှာပါ ဆက်တပို့ရန်)
+                    document.getElementById('coords').innerText = `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`;
                     socket.emit('liveLocationUpdate', { lat: lat, lng: lng });
+                    document.getElementById('status').innerText = "အခြေအနေ: တည်နေရာ မျှဝေနေပါပြီ";
                 }, (error) => {
-                    alert("တည်နေရာယူ၍ မရပါ: " + error.message);
+                    alert("တည်နေရာရယူ၍ မရပါ: " + error.message);
                 }, { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 });
             } else {
-                alert("Geolocation ကို သင့်ဘရောက်ဇာမှ မထောက်ပံ့ပါ။");
+                alert("ဒီဘရောက်ဇာမှ တည်နေရာရှာဖွေမှုကို မထောက်ပံ့ပါ။");
             }
         }
 
-        // ယာဉ်မောင်း လက်ခံကြောင်း အကြောင်းကြားခြင်း
         socket.on('rideAccepted', (data) => {
             document.getElementById('status').innerText = data.message;
         });
 
-        // ယာဉ်မောင်း တည်နေရာကို လက်ခံပြသခြင်း
         socket.on('driverLocationUpdate', (data) => {
             if (!driverMarker) {
                 driverMarker = L.marker([data.lat, data.lng], {
@@ -83,7 +87,6 @@
             }
         });
 
-        // ယာဉ်မောင်း ရောက်ရှိလာပါက အသံမြည်ခြင်း
         socket.on('driverArrived', (data) => {
             playAlertVoice("ကားဆရာ ရောက်ရှိပါပြီ");
             document.getElementById('status').innerText = "ကားဆရာ ရောက်ရှိပါပြီ!";
