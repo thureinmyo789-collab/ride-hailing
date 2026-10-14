@@ -12,7 +12,8 @@
         .info-box { position: absolute; top: 10px; right: 10px; z-index: 1000; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
         #status { font-weight: bold; color: #007bff; margin-top: 5px; }
     </style>
-</head>
+</head><!-- Leaflet Routing Machine CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
 <body>
     <div class="info-box">
         <h3>Driver Dashboard</h3>
@@ -23,7 +24,12 @@
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <!-- Socket.io -->
-    <script src="/socket.io/socket.io.js"></script>
+
+<!-- Leaflet Routing Machine JS -->
+<script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+
+<!-- Socket.io -->
+<script src="/socket.io/socket.io.js"></script>
     <script>
         // Map Initialize
         var map = L.map('map').setView([21.9833, 100.0833], 15);
