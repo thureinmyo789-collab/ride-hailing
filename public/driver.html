@@ -11,7 +11,8 @@
         .info-box { position: absolute; top: 10px; right: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
         #status { font-weight: bold; color: #007bff; }
         .finish-btn { margin-top: 10px; padding: 8px 12px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; display: none; }
-        .leaflet-routing-container { display: none !important; }
+        /* Routing container လုံးဝ မပေါ်လာစေရန် သေချာ ဖျောက်ထားခြင်း */
+        .leaflet-routing-container, .leaflet-routing-error { display: none !important; width: 0 !important; height: 0 !important; }
     </style>
     <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
 </head>
@@ -41,7 +42,6 @@
 
         var driverLat = null;
         var driverLng = null;
-        var watchId = null;
 
         // ယာဉ်မောင်း မားကာ (အနီရောင်)
         var redIcon = L.icon({
@@ -62,7 +62,7 @@
             }
         }
 
-        // ယာဉ်မောင်း၏ ကိုယ်ပိုင် GPS တည်နေရာကို တိကျစွာ ရယူခြင်း
+        // ယာဉ်မောင်း၏ GPS တည်နေရာကို တိကျစွာ ရယူခြင်း
         if (navigator.geolocation) {
             navigator.geolocation.watchPosition((position) => {
                 driverLat = position.coords.latitude;
@@ -79,7 +79,6 @@
                     driverMarker.setPopupContent(`<b>သင့်တည်နေရာ (ယာဉ်မောင်း)</b><br><span style="font-size:12px; color:gray;">Lat: ${driverLat.toFixed(4)}, Lng: ${driverLng.toFixed(4)}</span>`);
                 }
 
-                // ခရီးစဉ် လက်ခံထားပြီးဆိုလျှင် ဆာဗာသို့ တည်နေရာပို့မည်၊ လမ်းကြောင်းနှင့် အကွာအဝေး စစ်ဆေးမည်
                 if (activePassengerId && targetLat && targetLng) {
                     socket.emit('driverLocationUpdate', { lat: driverLat, lng: driverLng, passengerId: activePassengerId });
 
@@ -132,15 +131,25 @@
             document.getElementById('status').innerText = 'ခရီးစဉ် လက်ခံထားပါသည်။';
             document.getElementById('finish-ride-btn').style.display = 'block';
 
-            if (routingControl) { map.removeControl(routingControl); }
-            
+            if (routingControl) { 
+                map.removeControl(routingControl); 
+                routingControl = null;
+            }
+
+            // လမ်းကြောင်းလိုင်း သီးသန့်ပေါ်စေရန်နှင့် text box လုံးဝမပါစေရန်
             routingControl = L.Routing.control({
-                waypoints: [L.latLng(driverLat, driverLng), L.latLng(pLat, pLng)],
+                waypoints: [
+                    L.latLng(driverLat, driverLng),
+                    L.latLng(targetLat, targetLng)
+                ],
                 routeWhileDragging: false,
                 addWaypoints: false,
                 draggableWaypoints: false,
                 fitSelectedRoutes: true,
                 showAlternatives: false,
+                lineOptions: {
+                    styles: [{ color: '#007bff', opacity: 0.8, weight: 6 }]
+                },
                 createMarker: function() { return null; }
             }).addTo(map);
         };
