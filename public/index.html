@@ -3,91 +3,99 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ခရီးသည် တည်နေရာပေးပို့ခြင်း</title>
+    <title>Passenger App</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body { font-family: sans-serif; margin: 0; padding: 0; background: #f9f9f9; text-align: center; }
-        #map { height: 60vh; width: 100%; }
-        .panel { padding: 15px; background: #fff; }
-        button { padding: 12px 20px; font-size: 16px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
-        #status { font-weight: bold; margin-top: 10px; color: #333; }
+        #map { height: 80vh; width: 100%; }
+        body { margin: 0; padding: 0; font-family: sans-serif; text-align: center; }
+        .btn { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; margin: 10px; }
+        #status { font-weight: bold; color: #333; margin: 10px; }
     </style>
-<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
-<script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
 </head>
 <body>
-
+    <h2>ခရီးသည် တည်နေရာပြ စနစ်</h2>
+    <p id="status">တည်နေရာ စတင်ရှာဖွေနေသည်...</p>
+    <button class="btn" onclick="sendLocation()">တည်နေရာ စတင်မျှဝေမည်</button>
     <div id="map"></div>
 
-    <div class="panel">
-        <button onclick="startSharing()">တည်နေရာ စတင်မျှဝေမည်</button>
-        <div id="status">အခြေအနေ: တည်နေရာ မျှဝေရန် ခလုတ်ကို နှိပ်ပါ</div>
-    </div>
-
-    <!-- Socket.io နှင့် Leaflet JS -->
-    <script src="/socket.io/socket.io.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+
     <script>
-        const socket = io();
         var map = L.map('map').setView([21.9833, 100.0833], 15);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-        }).addTo(map);
+        var socket = io();
+        var myMarker = null;
+        var driverMarker = null;
+        var watchId = null;
 
-        var marker = null;
-        let passengerId = "p_" + Math.random().toString(36).substring(7);
+        function playAlertVoice(text) {
+            if ('speechSynthesis' in window) {
+                var utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'my-MM';
+                utterance.rate = 1.0;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
 
-        function startSharing() {
-            document.getElementById('status').innerText = "အခြေအနေ: တည်နေရာ မျှဝေနေပါပြီ...";
-            
+        function sendLocation() {
             if (navigator.geolocation) {
-                navigator.geolocation.watchPosition(function(pos) {
-                    let lat = pos.coords.latitude;
-                    let lng = pos.coords.longitude;
+                document.getElementById('status').innerText = "တည်နေရာ မျှဝေနေပါပြီ...";
+                watchId = navigator.geolocation.watchPosition((position) => {
+                    var lat = position.coords.latitude;
+                    var lng = position.coords.longitude;
 
-                    // ယာဉ်မောင်းဘက်သို့ liveLocationUpdate ဖြင့် တည်နေရာ ပို့မည်
-                    socket.emit('liveLocationUpdate', { passengerId: passengerId, lat: lat, lng: lng });
-
-                    document.getElementById('status').innerText = `တည်နေရာရယူပြီး - Lat: ${lat.toFixed(5)}, Lng: ${lng.toFixed(5)}`;
-
-                    if (!marker) {
-                        marker = L.marker([lat, lng]).addTo(map).bindPopup("သင့်တည်နေရာ").openPopup();
+                    if (!myMarker) {
+                        myMarker = L.marker([lat, lng]).addTo(map).bindPopup("သင့်တည်နေရာ").openPopup();
+                        map.setView([lat, lng], 16);
                     } else {
-                        marker.setLatLng([lat, lng]);
+                        myMarker.setLatLng([lat, lng]);
                     }
-                    map.setView([lat, lng], 16);
-                }, (err) => {
-                    alert("Location ရယူ၍မရပါ။ GPS ဖွင့်ထားပါ။");
+
+                    // ဆာဗာသို့ တည်နေရာ အဉ်တိတ်ပို့ခြင်း (Background မှာပါ ဆက်တပို့ရန်)
+                    socket.emit('liveLocationUpdate', { lat: lat, lng: lng });
+                }, (error) => {
+                    alert("တည်နေရာယူ၍ မရပါ: " + error.message);
                 }, { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 });
             } else {
-                alert("Geolocation is not supported by this browser.");
+                alert("Geolocation ကို သင့်ဘရောက်ဇာမှ မထောက်ပံ့ပါ။");
             }
-        }// Socket.io ဖြင့် ယာဉ်မောင်းလက်ခံမှုကို စောင့်ဆိုင်းခြင်း
-socket.on('rideAccepted', (data) => {
-    alert('သင်၏ ခေါ်ဆိုမှုကို ယာဉ်မောင်းမှ လက်ခံရရှိပါပြီ!');
-    document.getElementById('status').innerText = "ယာဉ်မောင်း လာနေပါပြီ";
-});let routingControl = null;
-
-if (typeof marker !== 'undefined' && marker) {
-    marker.on('click', function() {
-        socket.emit('acceptRide', { passengerId: 'some_id', status: 'accepted' });
-        alert('ခရီးသည်ကို လက်ခံလိုက်ပါပြီ။ လမ်းကြောင်း စတင်ပြသနေပါပြီ။');
-
-        if (routingControl) {
-            map.removeControl(routingControl);
         }
-        
-        routingControl = L.Routing.control({
-            waypoints: [
-                L.latLng(driverLat, driverLng), 
-                L.latLng(passengerLat, passengerLng) 
-            ],
-            routeWhileDragging: false,
-            language: 'my'
-        }).addTo(map);
-    });
-}
+
+        // ယာဉ်မောင်း လက်ခံကြောင်း အကြောင်းကြားခြင်း
+        socket.on('rideAccepted', (data) => {
+            document.getElementById('status').innerText = data.message;
+        });
+
+        // ယာဉ်မောင်း တည်နေရာကို လက်ခံပြသခြင်း
+        socket.on('driverLocationUpdate', (data) => {
+            if (!driverMarker) {
+                driverMarker = L.marker([data.lat, data.lng], {
+                    icon: L.icon({
+                        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+                        iconSize: [25, 41],
+                        iconAnchor: [12, 41]
+                    })
+                }).addTo(map).bindPopup("<b>ယာဉ်မောင်း လာနေပါပြီ</b>").openPopup();
+            } else {
+                driverMarker.setLatLng([data.lat, data.lng]);
+            }
+        });
+
+        // ယာဉ်မောင်း ရောက်ရှိလာပါက အသံမြည်ခြင်း
+        socket.on('driverArrived', (data) => {
+            playAlertVoice("ကားဆရာ ရောက်ရှိပါပြီ");
+            document.getElementById('status').innerText = "ကားဆရာ ရောက်ရှိပါပြီ!";
+        });
+
+        socket.on('rideFinished', (data) => {
+            if (driverMarker) {
+                map.removeLayer(driverMarker);
+                driverMarker = null;
+            }
+            document.getElementById('status').innerText = "ခရီးစဉ် ပြီးဆုံးသွားပါပြီ။";
+        });
     </script>
 </body>
 </html>
