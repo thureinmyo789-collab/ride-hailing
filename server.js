@@ -11,51 +11,55 @@ app.use(express.static('public'));
 let passengersLocations = {};
 
 io.on('connection', (socket) => {
-    console.log('ချိတ်ဆက်မှု ရရှိပါပြီ ID: ' + socket.id);
+    console.log('A user connected: ' + socket.id);
 
-    for (let id in passengersLocations) {
-        socket.emit('liveLocationUpdate', {
-            id: id,
-            lat: passengersLocations[id].lat,
-            lng: passengersLocations[id].lng
-        });
-    }
-
+    // ခရီးသည် တည်နေရာ အပ်ဒိတ်လုပ်ခြင်း
     socket.on('liveLocationUpdate', (data) => {
-        passengersLocations[socket.id] = { lat: data.lat, lng: data.lng };
-        io.emit('liveLocationUpdate', {
-            id: socket.id,
-            lat: data.lat,
-            lng: data.lng
+        passengersLocations[socket.id] = { 
+            id: socket.id, 
+            lat: data.lat, 
+            lng: data.lng 
+        };
+        // ယာဉ်မောင်းအားလုံးထံသို့ ခရီးသည် တည်နေရာ ပို့ပေးခြင်း
+        io.emit('liveLocationUpdate', passengersLocations[socket.id]);
+    });
+
+    // ယာဉ်မောင်းမှ ခရီးစဉ်ကို လက်ခံခြင်း (ခရီးသည်ဘက်သို့ ယာဉ်မောင်း တည်နေရာနှင့် စာ ပို့မည်)
+    socket.on('acceptRide', (data) => {
+        io.to(data.passengerId).emit('rideAccepted', {
+            message: data.message,
+            driverId: socket.id
         });
     });
 
-    socket.on('acceptRide', (data) => {
-        if (data.passengerId) {
-            io.to(data.passengerId).emit('rideAccepted', { message: 'ယာဉ်မောင်းမှ သင့်ခရီးစဉ်ကို လက်ခံလိုက်ပါပြီ။' });
-        } else {
-            io.emit('rideAccepted', { message: 'ယာဉ်မောင်းမှ သင့်ခရီးစဉ်ကို လက်ခံလိုက်ပါပြီ။' });
-        }
-        io.emit('driverAssigned', data);
-    });
-
+    // ယာဉ်မောင်း တည်နေရာ ရွေ့လျားမှုကို သက်ဆိုင်ရာ ခရီးသည်ဆီ ပို့ပေးခြင်း
     socket.on('driverLocationUpdate', (data) => {
-        io.emit('driverLocationUpdate', data);
+        if (data.passengerId) {
+            io.to(data.passengerId).emit('driverLocationUpdate', {
+                lat: data.lat,
+                lng: data.lng
+            });
+        }
     });
 
-    // ခရီးစဉ်ပြီးဆုံးပါက ထိုခရီးသည်၏ တည်နေရာကိုသာ ဖျက်ပြီး ယာဉ်မောင်းမားကာ ဆက်ရှိစေရန်
-    socket.on('finishRide', (data) => {
-        if (data.passengerId && passengersLocations[data.passengerId]) {
-            delete passengersLocations[data.passengerId];
+    // ယာဉ်မောင်း ရောက်ရှိကြောင်း အကြောင်းကြားခြင်း
+    socket.on('driverArrived', (data) => {
+        if (data.passengerId) {
+            io.to(data.passengerId).emit('driverArrived', data);
         }
-        // သက်ဆိုင်ရာ ခရီးသည်ဘက်သို့ ပြီးဆုံးကြောင်း အသိပေးခြင်း
-        io.to(data.passengerId).emit('rideFinished', data);
-        // ယာဉ်မောင်းဘက်တွင်လည်း ထိုခရီးသည်မားကာ ဖျက်ရန် အချက်ပြခြင်း
-        io.emit('removePassengerMarker', { passengerId: data.passengerId });
+    });
+
+    // ခရီးစဉ် ပြီးဆုံးကြောင်း
+    socket.on('finishRide', (data) => {
+        if (data.passengerId) {
+            io.to(data.passengerId).emit('rideFinished', data);
+        }
     });
 
     socket.on('disconnect', () => {
-        console.log('ချိတ်ဆက်မှု ပြတ်တောက်သွားပါပြီ ID: ' + socket.id);
+        console.log('User disconnected: ' + socket.id);
+        delete passengersLocations[socket.id];
+        io.emit('removePassengerMarker', { passengerId: socket.id });
     });
 });
 
