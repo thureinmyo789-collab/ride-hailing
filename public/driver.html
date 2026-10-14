@@ -41,13 +41,19 @@
         var driverLat = 21.67184;
         var driverLng = 100.02042;
 
-        driverMarker = L.marker([driverLat, driverLng], {
-            icon: L.icon({
-                iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-                iconSize: [25, 41],
-                iconAnchor: [12, 41]
-            })
-        }).addTo(map).bindPopup("<b>သင့်တည်နေရာ (ယာဉ်မောင်း)</b>");
+        // ယာဉ်မောင်း မားကာ (အနီရောင်)
+        var redIcon = L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+        });
+
+        driverMarker = L.marker([driverLat, driverLng], { icon: redIcon })
+            .addTo(map)
+            .bindPopup(`<b>သင့်တည်နေရာ (ယာဉ်မောင်း)</b><br><span style="font-size:12px; color:gray;">Lat: ${driverLat.toFixed(4)}, Lng: ${driverLng.toFixed(4)}</span>`);
 
         function playAlertVoice(text) {
             if ('speechSynthesis' in window) {
@@ -102,6 +108,7 @@
 
                 if (driverMarker) {
                     driverMarker.setLatLng([driverLat, driverLng]);
+                    driverMarker.setPopupContent(`<b>သင့်တည်နေရာ (ယာဉ်မောင်း)</b><br><span style="font-size:12px; color:gray;">Lat: ${driverLat.toFixed(4)}, Lng: ${driverLng.toFixed(4)}</span>`);
                 }
 
                 socket.emit('driverLocationUpdate', { lat: driverLat, lng: driverLng, passengerId: activePassengerId });
