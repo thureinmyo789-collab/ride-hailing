@@ -35,6 +35,16 @@
         var myMarker = null;
         var driverMarker = null;
 
+        // အနီရောင် မားကာအသစ် ဖန်တီးရန် (Leaflet default red marker icon url)
+        var redIcon = L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+        });
+
         function playAlertVoice(text) {
             if ('speechSynthesis' in window) {
                 var utterance = new SpeechSynthesisUtterance(text);
@@ -73,20 +83,19 @@
             document.getElementById('status').innerText = data.message;
         });
 
+        // ယာဉ်မောင်း တည်နေရာရွေ့လျားမှုကို အနီရောင်မားကာဖြင့် ပြသခြင်း
         socket.on('driverLocationUpdate', (data) => {
             if (!driverMarker) {
-                driverMarker = L.marker([data.lat, data.lng], {
-                    icon: L.icon({
-                        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-                        iconSize: [25, 41],
-                        iconAnchor: [12, 41]
-                    })
-                }).addTo(map).bindPopup("<b>ယာဉ်မောင်း လာနေပါပြီ</b>").openPopup();
+                driverMarker = L.marker([data.lat, data.lng], { icon: redIcon })
+                    .addTo(map)
+                    .bindPopup("<b>ယာဉ်မောင်း လာနေပါပြီ (အနီရောင်)</b>")
+                    .openPopup();
             } else {
                 driverMarker.setLatLng([data.lat, data.lng]);
             }
         });
 
+        // ယာဉ်မောင်း ရောက်ရှိလာပါက ခရီးသည်ဖုန်းတွင်ပါ အသံမြည်ခြင်း
         socket.on('driverArrived', (data) => {
             playAlertVoice("ကားဆရာ ရောက်ရှိပါပြီ");
             document.getElementById('status').innerText = "ကားဆရာ ရောက်ရှိပါပြီ!";
