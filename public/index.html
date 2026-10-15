@@ -34,6 +34,7 @@
         var socket = io();
         var myMarker = null;
         var driverMarker = null;
+        var isSharing = false;
 
         // ယာဉ်မောင်းအတွက် အနီရောင် မားကာ
         var redIcon = L.icon({
@@ -54,31 +55,41 @@
             }
         }
 
+        // ခရီးသည်လင့်ခ်ထဲ ဝင်ဝင်ချင်း ကိုယ့်တည်နေရာကို Realtime ခြေရာခံပြသပေးခြင်း (အဆက်အသွယ်မရှိသေးချိန်လည်း မြင်ရရန်)
+        if (navigator.geolocation) {
+            navigator.geolocation.watchPosition((position) => {
+                var lat = position.coords.latitude;
+                var lng = position.coords.longitude;
+
+                if (!myMarker) {
+                    myMarker = L.marker([lat, lng]).addTo(map).bindPopup(`<b>သင့်တည်နေရာ (ခရီးသည်)</b><br><span style="font-size:12px; color:gray;">Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}</span>`).openPopup();
+                    map.setView([lat, lng], 17);
+                } else {
+                    myMarker.setLatLng([lat, lng]);
+                    myMarker.setPopupContent(`<b>သင့်တည်နေရာ (ခရီးသည်)</b><br><span style="font-size:12px; color:gray;">Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}</span>`);
+                }
+
+                document.getElementById('coords').innerText = `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`;
+
+                // တည်နေရာမျှဝေရန် ခလုတ်နှိပ်ပြီးပါက ဆာဗာသို့ တည်နေရာ தொடர்ந்து ပို့ပေးမည် (ဖုန်း screen ပိတ်ထားလည်း background တွင် အလုပ်လုပ်မည်)
+                if (isSharing) {
+                    socket.emit('liveLocationUpdate', { lat: lat, lng: lng });
+                }
+            }, (error) => {
+                console.error("Passenger GPS Error: " + error.message);
+            }, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 });
+        }
+
         function startSharing() {
             if (navigator.geolocation) {
-                document.getElementById('status').innerText = "အခြေအနေ: တည်နေရာ တိကျစွာ ရယူနေပါပြီ...";
+                isSharing = true;
+                document.getElementById('status').innerText = "အခြေအနေ: တည်နေရာ မျှဝေနေပါပြီ";
                 
-                // GPS တိကျမှု မြင့်မားစေရန် High Accuracy နှင့် options များ သုံးထားခြင်း
-                navigator.geolocation.watchPosition((position) => {
+                navigator.geolocation.getCurrentPosition((position) => {
                     var lat = position.coords.latitude;
                     var lng = position.coords.longitude;
-
-                    if (!myMarker) {
-                        myMarker = L.marker([lat, lng]).addTo(map).bindPopup(`<b>သင့်တည်နေရာ (ခရီးသည်)</b><br><span style="font-size:12px; color:gray;">Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}</span>`).openPopup();
-                        map.setView([lat, lng], 17);
-                    } else {
-                        myMarker.setLatLng([lat, lng]);
-                        myMarker.setPopupContent(`<b>သင့်တည်နေရာ (ခရီးသည်)</b><br><span style="font-size:12px; color:gray;">Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}</span>`);
-                    }
-
-                    document.getElementById('coords').innerText = `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`;
-                    
-                    // ဆာဗာသို့ တည်နေရာ ပို့ပေးခြင်း
                     socket.emit('liveLocationUpdate', { lat: lat, lng: lng });
-                    document.getElementById('status').innerText = "အခြေအနေ: တည်နေရာ မျှဝေနေပါပြီ";
-                }, (error) => {
-                    alert("တည်နေရာရယူ၍ မရပါ: " + error.message);
-                }, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 });
+                });
             } else {
                 alert("ဒီဘရောက်ဇာမှ တည်နေရာရှာဖွေမှုကို မထောက်ပံ့ပါ။");
             }
@@ -94,7 +105,7 @@
             if (!driverMarker) {
                 driverMarker = L.marker([data.lat, data.lng], { icon: redIcon })
                     .addTo(map)
-                    .bindPopup(`<b>ယာဉ်မောင်း လาနေပါပြီ</b><br><span style="font-size:12px; color:gray;">Lat: ${data.lat.toFixed(4)}, Lng: ${data.lng.toFixed(4)}</span>`)
+                    .bindPopup(`<b>ယာဉ်မောင်း လာနေပါပြီ</b><br><span style="font-size:12px; color:gray;">Lat: ${data.lat.toFixed(4)}, Lng: ${data.lng.toFixed(4)}</span>`)
                     .openPopup();
             } else {
                 driverMarker.setLatLng([data.lat, data.lng]);
