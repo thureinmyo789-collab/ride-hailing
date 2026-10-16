@@ -28,9 +28,13 @@
     <script src="/socket.io/socket.io.js"></script>
 
     <script>
-        var map = L.map('map').setView([21.9833, 100.0833], 15);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+                var map = L.map('map').setView([21.9833, 100.0833], 15);
 
+        // Google Hybrid Map (ဂြိုလ်တုပုံရိပ် + လမ်းနှင့် နေရာအမည်များ)
+        L.tileLayer('https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+        }).addTo(map);
         var socket = io();
         var myMarker = null;
         var driverMarker = null;
@@ -77,7 +81,7 @@
                 }
             }, (error) => {
                 console.error("Passenger GPS Error: " + error.message);
-            }, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 });
+            }, { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 });
         }
 
         function startSharing() {
