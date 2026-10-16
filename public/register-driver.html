@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ယာဉ်မောင်း မှတ်ပုံတင်ရန် - Ride Hailing</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f7f6; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .register-container { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
+        h2 { color: #007bff; margin-bottom: 20px; }
+        .form-group { margin-bottom: 15px; text-align: left; }
+        .form-group label { display: block; font-size: 13px; margin-bottom: 5px; color: #555; }
+        .form-group input { width: 100%; padding: 10px; font-size: 14px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        .submit-btn { width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        .submit-btn:hover { background: #218838; }
+        #message { margin-top: 15px; font-size: 14px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="register-container">
+        <h2>ယာဉ်မောင်း မှတ်ပုံတင်ရန်</h2>
+        <form id="registerForm" onsubmit="registerDriver(event)">
+            <div class="form-group">
+                <label>ယာဉ်မောင်း အမည်</label>
+                <input type="text" id="name" required placeholder="ဥပမာ - ဦးဘရှင်">
+            </div>
+            <div class="form-group">
+                <label>ဖုန်းနံပါတ်</label>
+                <input type="text" id="phone" required placeholder="ဥပမာ - 09123456789">
+            </div>
+            <div class="form-group">
+                <label>ကားအမျိုးအစား နှင့် နံပါတ်</label>
+                <input type="text" id="car" required placeholder="ဥပမာ - Toyota Crown (က-၁၂၃၄)">
+            </div>
+            <div class="form-group">
+                <label>ဓာတ်ပုံ LInk (သို့မဟုတ် Profile ပုံလင့်ခ်)</label>
+                <input type="text" id="image" placeholder="https://example.com/photo.jpg (မထည့်လည်းရသည်)">
+            </div>
+            <button type="submit" class="submit-btn">စာရင်းသွင်းမည်</button>
+        </form>
+        <div id="message"></div>
+    </div>
+
+    <script>
+        function registerDriver(event) {
+            event.preventDefault();
+            const name = document.getElementById('name').value;
+            const phone = document.getElementById('phone').value;
+            const car = document.getElementById('car').value;
+            const image = document.getElementById('image').value;
+
+            fetch('/api/register-driver', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, phone, car, image })
+            })
+            .then(res => res.json())
+            .then(data => {
+                const msg = document.getElementById('message');
+                msg.innerText = data.message;
+                msg.style.color = data.success ? 'green' : 'red';
+                if (data.success) {
+                    document.getElementById('registerForm').reset();
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                document.getElementById('message').innerText = "ချိတ်ဆက်မှု အမှားအယွင်း ရှိပါသည်။";
+                document.getElementById('message').style.color = 'red';
+            });
+        }
+    </script>
+</body>
+</html>
