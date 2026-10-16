@@ -108,6 +108,20 @@
             var pLat = data.lat;
             var pLng = data.lng;
 
+            // အကယ်၍ ဤခရီးသည်နှင့် လက်ရှိ ချိတ်ဆက်(လက်ခံ)ထားပြီးသားဆိုလျှင် targetLat နှင့် targetLng ကို Realtime အပ်ဒိတ်လုပ်ပါ
+            if (activePassengerId === pId) {
+                targetLat = pLat;
+                targetLng = pLng;
+                
+                // ယာဉ်မောင်းနှင့် ရွေ့လျားနေသော ခရီးသည်ကြား routing လမ်းကြောင်းလိုင်းကို အလိုအလျောက် ဆွဲပေးရန်
+                if (driverLat && driverLng && routingControl) {
+                    routingControl.setWaypoints([
+                        L.latLng(driverLat, driverLng),
+                        L.latLng(targetLat, targetLng)
+                    ]);
+                }
+            }
+
             if (!passengersMarkers[pId]) {
                 var marker = L.marker([pLat, pLng]).addTo(map)
                     .bindPopup(`<b>ခရီးသည် တည်နေရာ</b><br><span style="font-size:12px; color:gray;">Lat: ${pLat.toFixed(4)}, Lng: ${pLng.toFixed(4)}</span><br><br><button onclick="acceptSpecificRide('${pId}', ${pLat}, ${pLng})" style='padding:6px 12px; background:#007bff; color:white; border:none; border-radius:4px; cursor:pointer;'>ဤခရီးစဉ်ကို လက်ခံမည်</button>`);
