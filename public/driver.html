@@ -29,19 +29,14 @@
     <script src="/socket.io/socket.io.js"></script>
 
     <script>
-        var map = L.map('map').setView([21.9833, 100.0833], 15);
-             
-        // ၁။ အောက်ခံ ဂြိုလ်တုပုံရိပ်
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Tiles &copy; Esri',
-            maxZoom: 19
-        }).addTo(map);
+                   var map = L.map('map').setView([21.9833, 100.0833], 15);
 
-        // ၂။ အပေါ်ကနေ ထပ်ပြမည့် လမ်းနာမည်နှင့် နေရာအမည်များ
-        L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
-            maxZoom: 19
+        // Google Hybrid Map (ဂြိုလ်တုပုံရိပ် + လမ်းနှင့် နေရာအမည်များ)
+        L.tileLayer('https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
         }).addTo(map);
-        var socket = io();
+ var socket = io();
         var passengersMarkers = {};
         var driverMarker = null;
         var routingControl = null;
