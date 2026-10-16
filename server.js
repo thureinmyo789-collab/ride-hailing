@@ -10,6 +10,10 @@ const io = new Server(server);
 
 app.use(express.static('public'));
 app.use(express.json());
+// ယာဉ်မောင်း မှတ်ပုံတင်စာမျက်နှာအတွက် သီးသန့် Route
+app.get('/register-driver.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'register-driver.html'));
+});
 
 const DRIVERS_FILE = path.join(__dirname, 'drivers.json');
 
