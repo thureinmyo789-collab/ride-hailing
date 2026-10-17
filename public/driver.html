@@ -175,7 +175,10 @@
             destLng = pDestLng;
             arrivedAlerted = false;
 
-            socket.emit('acceptRide', { passengerId: passengerId, message: 'ယာဉ်မောင်းမှ သင့်ခရီးစဉ်ကို လက်ခံလိုက်ပါပြီ။' });
+            socket.emit('acceptRide', { passengerId: passengerId, message: 'ယာဉ်မောင်းမှ သင့်ခရီးစဉ်ကို လက်ခံလိုက်ပါပြီ။' });            if (driverLat && driverLng) {
+            if (driverLat && driverLng) {
+                socket.emit('driverLocationUpdate', { lat: driverLat, lng: driverLng, passengerId: activePassengerId });
+            }
             document.getElementById('status').innerText = 'ခရီးစဉ် လက်ခံထားပါသည်။';
             document.getElementById('finish-ride-btn').style.display = 'block';
 
