@@ -114,8 +114,7 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         console.log('User disconnected: ' + socket.id);
         delete passengersLocations[socket.id];
-        io.emit('removePassengerMarker', { passengerId: socket.id });
-    });
+        io.emit('removePassengerMarker', { passengerId: socket.id });    });
 });
 
 const PORT = process.env.PORT || 3000;
