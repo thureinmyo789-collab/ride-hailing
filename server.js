@@ -7,19 +7,29 @@ const path = require('path');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
-const DRIVERS_FILE = path.join(__dirname, 'drivers.json');
 
-// Static files များကို public folder မှ တိုက်ရိုက်ဖတ်ရန်
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static('public'));
 app.use(express.json());
 
-// ယာဉ်မောင်း မှတ်ပုံတင်စာမျက်နှာအတွက် Route သတ်မှတ်ချက်
-app.get('/register-driver.html', (req, res) => {
- res.sendFile(path.join(__dirname, 'public', 'register-driver.html'));
+const DRIVERS_FILE = path.join(__dirname, 'drivers.json');
 
-// မူရင်း ယာဉ်မောင်းဖိုင် မရှိသေးပါက အလွတ် array ဖြင့် စတင်ဖန်တီးခြင်း (အတုများ မပါတော့ပါ)
+// မူရင်း ယာဉ်မောင်းဖိုင် မရှိသေးပါက နမူနာစာရင်းဖြင့် စတင်ဖန်တီးခြင်း
 if (!fs.existsSync(DRIVERS_FILE)) {
-    fs.writeFileSync(DRIVERS_FILE, JSON.stringify([], null, 2));
+    const initialDrivers = [
+        {
+            name: "ဦးကျော်ကျော်",
+            phone: "09123456789",
+            car: "Toyota Alphard (က-၁၂၃၄)",
+            image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100"
+        },
+        {
+            name: "ကိုစိုးမိုး",
+            phone: "09987654321",
+            car: "Toyota Crown (ခ-၅၆၇၈)",
+            image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100"
+        }
+    ];
+    fs.writeFileSync(DRIVERS_FILE, JSON.stringify(initialDrivers, null, 2));
 }
 
 // ယာဉ်မောင်းစာရင်း ထုတ်ပေးသော API
@@ -31,21 +41,40 @@ app.get('/api/drivers', (req, res) => {
         res.status(500).json({ error: "မအောင်မြင်ပါ" });
     }
 });
-// ယာဉ်မောင်းအသစ် မှတ်ပုံတင်ခြင်း API
-app.post('/api/drivers', (req, res) => {
+
+// ယာဉ်မောင်းအသစ် Register လုပ်သော API
+app.post('/api/register-driver', (req, res) => {
     try {
-        const newDriver = req.body;
+        const { name, phone, car, image } = req.body;
+        if (!name || !phone || !car) {
+            return res.status(400).json({ success: false, message: "အချက်အလက်များ မပြည့်စုံပါ။" });
+        }
+
         const data = fs.readFileSync(DRIVERS_FILE, 'utf8');
         const drivers = JSON.parse(data);
+
+        const existing = drivers.find(d => d.phone === phone);
+        if (existing) {
+            return res.status(400).json({ success: false, message: "ဤဖုန်းနံပါတ်ဖြင့် မှတ်ပုံတင်ပြီးသား ဖြစ်ပါသည်။" });
+        }
+
+        const newDriver = {
+            name,
+            phone,
+            car,
+            image: image || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100"
+        };
+
         drivers.push(newDriver);
         fs.writeFileSync(DRIVERS_FILE, JSON.stringify(drivers, null, 2));
-        res.json({ success: true, message: "အောင်မြင်ပါသည်။" });
+
+        res.json({ success: true, message: "ယာဉ်မောင်း မှတ်ပုံတင်ခြင်း အောင်မြင်ပါသည်။" });
     } catch (err) {
-        res.status(500).json({ error: "မအောင်မြင်ပါ။" });
+        res.status(500).json({ success: false, message: "ဆာဗာ အမှားအယွင်း ရှိနေပါသည်။" });
     }
 });
 
-// ယာဉ်မောင်း ဖျက်ဆီးသော (Delete) API အသစ်
+// ယာဉ်မောင်းအား ဖျက်ဆီးသော (Delete) API
 app.delete('/api/drivers/:phone', (req, res) => {
     try {
         const phoneToDelete = req.params.phone;
@@ -54,18 +83,22 @@ app.delete('/api/drivers/:phone', (req, res) => {
 
         const filteredDrivers = drivers.filter(d => d.phone !== phoneToDelete);
 
+        if (filteredDrivers.length === drivers.length) {
+            return res.status(404).json({ success: false, message: "ရှာမတွေ့ပါ။" });
+        }
+
         fs.writeFileSync(DRIVERS_FILE, JSON.stringify(filteredDrivers, null, 2));
-        res.json({ success: true, message: "ယာဉ်မောင်းကို စာရင်းမှ ဖယ်ရှားပြီးပါပြီ။" });
+        res.json({ success: true, message: "ယာဉ်မောင်းကို အောင်မြင်စွာ ဖယ်ရှားပြီးပါပြီ။" });
     } catch (err) {
-        res.status(500).json({ success: false, message: "ဖျက်ဆီးရာတွင် အမှားအယွင်း ရှိနေပါသည်။" });
+        res.status(500).json({ success: false, message: "ဆာဗာ အမှားအယွင်း ရှိနေပါသည်။" });
     }
 });
+
 let passengersLocations = {};
 
 io.on('connection', (socket) => {
     console.log('A user connected: ' + socket.id);
 
-    // ခရီးသည် တည်နေရာ အပ်ဒိတ်လုပ်ခြင်း
     socket.on('liveLocationUpdate', (data) => {
         passengersLocations[socket.id] = { 
             id: socket.id, 
@@ -75,13 +108,10 @@ io.on('connection', (socket) => {
             destLng: data.destLng,
             driverPhone: data.driverPhone
         };
-        // ယာဉ်မောင်းအားလုံးထံသို့ ခရီးသည် တည်နေရာ ပို့ပေးခြင်း
         io.emit('liveLocationUpdate', passengersLocations[socket.id]);
     });
 
-    // ခရီးသည်မှ သီးသန့် ယာဉ်မောင်းကို ရွေးချယ်၍ တည်နေရာ/ခရီးစဉ် တောင်းဆိုခြင်း
     socket.on('passengerRequestRide', (data) => {
-        // data ထဲတွင် driverPhone ပါလာမည်၊ ၎င်းကို ယာဉ်မောင်း sockets များဆီသို့ (သို့မဟုတ် broadcast) ပို့ပေးနိုင်သည်
         io.emit('passengerRequestedRide', {
             passengerId: socket.id,
             lat: data.lat,
@@ -94,7 +124,6 @@ io.on('connection', (socket) => {
         });
     });
 
-    // ယာဉ်မောင်းမှ ခရီးစဉ်ကို လက်ခံခြင်း (ခရီးသည်ဘက်သို့ ယာဉ်မောင်း တည်နေရာနှင့် စာ ပို့မည်)
     socket.on('acceptRide', (data) => {
         io.to(data.passengerId).emit('rideAccepted', {
             message: data.message,
@@ -102,7 +131,6 @@ io.on('connection', (socket) => {
         });
     });
 
-    // ယာဉ်မောင်း တည်နေရာ ရွေ့လျားမှုကို သက်ဆိုင်ရာ ခရီးသည်ဆီ ပို့ပေးခြင်း
     socket.on('driverLocationUpdate', (data) => {
         if (data.passengerId) {
             io.to(data.passengerId).emit('driverLocationUpdate', {
@@ -112,14 +140,12 @@ io.on('connection', (socket) => {
         }
     });
 
-    // ယာဉ်မောင်း ရောက်ရှိကြောင်း အကြောင်းကြားခြင်း
     socket.on('driverArrived', (data) => {
         if (data.passengerId) {
             io.to(data.passengerId).emit('driverArrived', data);
         }
     });
 
-    // ခရီးစဉ် ပြီးဆုံးကြောင်း
     socket.on('finishRide', (data) => {
         if (data.passengerId) {
             io.to(data.passengerId).emit('rideFinished', data);
@@ -129,7 +155,8 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         console.log('User disconnected: ' + socket.id);
         delete passengersLocations[socket.id];
-        io.emit('removePassengerMarker', { passengerId: socket.id });    });
+        io.emit('removePassengerMarker', { passengerId: socket.id });
+    });
 });
 
 const PORT = process.env.PORT || 3000;
