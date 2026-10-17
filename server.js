@@ -15,25 +15,9 @@ app.get('/register-driver.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'register-driver.html'));
 });
 
-const DRIVERS_FILE = path.join(__dirname, 'drivers.json');
-
-// မူရင်း ယာဉ်မောင်းဖိုင် မရှိသေးပါက နမူနာစာရင်းဖြင့် စတင်ဖန်တီးခြင်း
+// မူရင်း ယာဉ်မောင်းဖိုင် မရှိသေးပါက အလွတ် array ဖြင့် စတင်ဖန်တီးခြင်း (အတုများ မပါတော့ပါ)
 if (!fs.existsSync(DRIVERS_FILE)) {
-    const initialDrivers = [
-        {
-            name: "ဦးကျော်ကျော်",
-            phone: "09123456789",
-            car: "Toyota Alphard (က-၁၂၃၄)",
-            image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100"
-        },
-        {
-            name: "ကိုစိုးမိုး",
-            phone: "09987654321",
-            car: "Toyota Crown (ခ-၅၆၇၈)",
-            image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100"
-        }
-    ];
-    fs.writeFileSync(DRIVERS_FILE, JSON.stringify(initialDrivers, null, 2));
+    fs.writeFileSync(DRIVERS_FILE, JSON.stringify([], null, 2));
 }
 
 // ယာဉ်မောင်းစာရင်း ထုတ်ပေးသော API
@@ -46,39 +30,21 @@ app.get('/api/drivers', (req, res) => {
     }
 });
 
-// ယာဉ်မောင်းအသစ် Register လုပ်သော API
-app.post('/api/register-driver', (req, res) => {
+// ယာဉ်မောင်း ဖျက်ဆီးသော (Delete) API အသစ်
+app.delete('/api/drivers/:phone', (req, res) => {
     try {
-        const { name, phone, car, image } = req.body;
-        if (!name || !phone || !car) {
-            return res.status(400).json({ success: false, message: "အချက်အလက်များ မပြည့်စုံပါ။" });
-        }
-
+        const phoneToDelete = req.params.phone;
         const data = fs.readFileSync(DRIVERS_FILE, 'utf8');
-        const drivers = JSON.parse(data);
+        let drivers = JSON.parse(data);
 
-        // ဖုန်းနံပါတ်တူ စာရင်းရှိမရှိ စစ်ဆေးခြင်း
-        const existing = drivers.find(d => d.phone === phone);
-        if (existing) {
-            return res.status(400).json({ success: false, message: "ဤဖုန်းနံပါတ်ဖြင့် မှတ်ပုံတင်ပြီးသား ဖြစ်ပါသည်။" });
-        }
+        const filteredDrivers = drivers.filter(d => d.phone !== phoneToDelete);
 
-        const newDriver = {
-            name,
-            phone,
-            car,
-            image: image || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100"
-        };
-
-        drivers.push(newDriver);
-        fs.writeFileSync(DRIVERS_FILE, JSON.stringify(drivers, null, 2));
-
-        res.json({ success: true, message: "ယာဉ်မောင်း မှတ်ပုံတင်ခြင်း အောင်မြင်ပါသည်။" });
+        fs.writeFileSync(DRIVERS_FILE, JSON.stringify(filteredDrivers, null, 2));
+        res.json({ success: true, message: "ယာဉ်မောင်းကို စာရင်းမှ ဖယ်ရှားပြီးပါပြီ။" });
     } catch (err) {
-        res.status(500).json({ success: false, message: "ဆာဗာ အမှားအယွင်း ရှိနေပါသည်။" });
+        res.status(500).json({ success: false, message: "ဖျက်ဆီးရာတွင် အမှားအယွင်း ရှိနေပါသည်။" });
     }
 });
-
 let passengersLocations = {};
 
 io.on('connection', (socket) => {
