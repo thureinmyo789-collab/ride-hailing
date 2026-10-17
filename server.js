@@ -7,6 +7,7 @@ const path = require('path');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
+const DRIVERS_FILE = path.join(__dirname, 'drivers.json');
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
