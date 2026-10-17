@@ -28,8 +28,8 @@
             <input type="text" id="destinationInput" placeholder="သွားမည့်နေရာ (သို့) ဟိုတယ်နာမည် ရိုက်ထည့်ပါ...">
             <button onclick="searchDestination()">ရှာမည်</button>
         </div>
-        <button onclick="startSharing()">တည်နေရာ စတင်မျှဝေမည်</button>
-        <div id="status">အခြေအနေ: တည်နေရာ မပို့ရသေးပါ</div>
+        <!-- "တည်နေရာ စတင်မျှဝေမည်" ခလုတ်ကို ဖြုတ်လိုက်ပါပြီ -->
+        <div id="status">အခြေအနေ: တည်နေရာ မမျှဝေသေးပါ</div>
         <div id="coords">Lat: -, Lng: -</div>
         <div id="driversList"></div>
     </div>
@@ -45,6 +45,7 @@
             maxZoom: 20,
             subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
         }).addTo(map);
+
         var socket = io();
         var myMarker = null;
         var driverMarker = null;
@@ -74,37 +75,60 @@
             }
         }
 
-        // ခရီးသည်လင့်ခ်ထဲ ဝင်ဝင်ချင်း GPS ပိတ်ထားပါက ဖွင့်ခိုင်းရန် စစ်ဆေးခြင်း
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition((position) => {
-                // GPS ဖွင့်ပြီးသားဖြစ်ပါက အလုပ်လုပ်မည်
-            }, (error) => {
-                alert("ကျေးဇူးပြု၍ ဖုန်း၏ Location (GPS) ကို ဖွင့်ပေးပါ။");
-            }, { timeout: 10000 });
+        // ခရီးသည် တည်နေရာ အပ်ဒိတ်လုပ်သည့် နေရာ (Marker ပြသရန်နှင့် မျှဝေရန်)
+        function updatePassengerMarker(lat, lng) {
+            currentLat = lat;
+            currentLng = lng;
 
+            if (!myMarker) {
+                myMarker = L.marker([currentLat, currentLng]).addTo(map).bindPopup(`<b>သင့်တည်နေရာ (ခရီးသည်)</b><br><span style="font-size:12px; color:gray;">Lat: ${currentLat.toFixed(4)}, Lng: ${currentLng.toFixed(4)}</span>`).openPopup();
+                map.setView([currentLat, currentLng], 17);
+            } else {
+                myMarker.setLatLng([currentLat, currentLng]);
+                myMarker.setPopupContent(`<b>သင့်တည်နေရာ (ခရီးသည်)</b><br><span style="font-size:12px; color:gray;">Lat: ${currentLat.toFixed(4)}, Lng: ${currentLng.toFixed(4)}</span>`);
+            }
+
+            document.getElementById('coords').innerText = `Lat: ${currentLat.toFixed(4)}, Lng: ${currentLng.toFixed(4)}`;
+
+            // ခေါ်မည်ခလုတ်နှိပ်ပြီးမှ မျှဝေမည်သတ်မှတ်ထားပါက isSharing true ဖြစ်မှသာ socket ပို့မည်
+            if (isSharing) {
+                socket.emit('liveLocationUpdate', { lat: currentLat, lng: currentLng, destLat: destLat, destLng: destLng });
+            }
+        }
+
+        // GPS စစ်ဆေးခြင်းနှင့် အလိုအလျောက် တည်နေရာ ရယူခြင်း လုပ်ဆောင်ချက်
+        function checkAndGetLocation() {
+            if (!navigator.geolocation) {
+                alert("သင့်ဘရောက်ဇာသည် တည်နေရာကို မထောက်ပံ့ပါ။");
+                return;
+            }
+
+            // ပထမဦးစွာ တည်နေရာ ရယူနိုင်ခြင်း ရှိမရှိ စစ်ဆေးခြင်း
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    updatePassengerMarker(position.coords.latitude, position.coords.longitude);
+                },
+                (error) => {
+                    if (error.code === error.PERMISSION_DENIED || error.code === error.POSITION_UNAVAILABLE) {
+                        alert("ကျေးဇူးပြု၍ ဖုန်း၏ Location (GPS) ကို ဖွင့်ပေးပါ။");
+                    }
+                },
+                { timeout: 10000 }
+            );
+
+            // တည်နေရာ အမြဲတမ်း ခြေရာခံပြီး မြေပုံပေါ်တွင် အလိုအလျောက် ပြသနေရန်
             navigator.geolocation.watchPosition((position) => {
-                currentLat = position.coords.latitude;
-                currentLng = position.coords.longitude;
-
-                if (!myMarker) {
-                    myMarker = L.marker([currentLat, currentLng]).addTo(map).bindPopup(`<b>သင့်တည်နေရာ (ခရီးသည်)</b><br><span style="font-size:12px; color:gray;">Lat: ${currentLat.toFixed(4)}, Lng: ${currentLng.toFixed(4)}</span>`).openPopup();
-                    map.setView([currentLat, currentLng], 17);
-                } else {
-                    myMarker.setLatLng([currentLat, currentLng]);
-                    myMarker.setPopupContent(`<b>သင့်တည်နေရာ (ခရီးသည်)</b><br><span style="font-size:12px; color:gray;">Lat: ${currentLat.toFixed(4)}, Lng: ${currentLng.toFixed(4)}</span>`);
-                }
-
-                document.getElementById('coords').innerText = `Lat: ${currentLat.toFixed(4)}, Lng: ${currentLng.toFixed(4)}`;
-
-                if (isSharing) {
-                    socket.emit('liveLocationUpdate', { lat: currentLat, lng: currentLng, destLat: destLat, destLng: destLng });
-                }
+                updatePassengerMarker(position.coords.latitude, position.coords.longitude);
             }, (error) => {
                 console.error("Passenger GPS Error: " + error.message);
             }, { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 });
-        } else {
-            alert("ဒီဘရောက်ဇာမှ တည်နေရာရှာဖွေမှုကို မထောက်ပံ့ပါ။");
         }
+
+        // စာမျက်နှာ စတင်ဖွင့်လှစ်သည်နှင့် Location စစ်ဆေးရန် ခေါ်ယူခြင်း
+        window.onload = () => {
+            checkAndGetLocation();
+            fetchDrivers(); // စာမျက်နှာပွင့်သည်နှင့် ယာဉ်မောင်းစာရင်းပါ တင်ပြရန်
+        };
 
         // မြေပုံပေါ်တွင် နေရာထောက်၍ သွားမည့်နေရာ သတ်မှတ်ခြင်း
         map.on('click', function(e) {
@@ -157,13 +181,14 @@
                                     ဖုန်း: <a href="tel:${d.phone}">${d.phone}</a><br>
                                     ကား: ${d.car}
                                 </div>
-                                <button onclick="selectDriver('${d.phone}', '${d.name}', '${d.car}')">ခေါ်မည်</button>
+                                <button onclick="selectDriver('${d.phone}', '${d.name}', '${d.car}')">ကားဆရာခေါ်မည်</button>
                             </div>
                         `;
                     });
                 });
         }
 
+        // "ကားဆရာခေါ်မည်" ခလုတ်နှိပ်မှသာ တည်နေရာ စတင်မျှဝေခြင်း
         function selectDriver(phone, name, car) {
             if (!currentLat || !currentLng) {
                 alert("သင့်လက်ရှိ တည်နေရာ မရသေးပါ။ ခဏစောင့်ပါ။");
@@ -181,17 +206,7 @@
                 driverName: name,
                 carInfo: car
             });
-            alert(name + " ထံသို့ ကားခေါ်ဆိုမှု ပို့လိုက်ပါပြီ။");
-        }
-
-        function startSharing() {
-            if (currentLat && currentLng) {
-                isSharing = true;
-                document.getElementById('status').innerText = "အခြေအနေ: တည်နေရာ မျှဝေနေပါပြီ";
-                socket.emit('liveLocationUpdate', { lat: currentLat, lng: currentLng, destLat: destLat, destLng: destLng });
-            } else {
-                alert("တည်နေရာ ရှာမတွေ့သေးပါ။");
-            }
+            alert(name + " ထံသို့ ကားခေါ်ဆိုမှုနှင့် တည်နေရာ ပို့လိုက်ပါပြီ။");
         }
 
         // ယာဉ်မောင်းမှ လက်ခံကြောင်း စာသားပြသခြင်း
