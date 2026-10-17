@@ -8,12 +8,15 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 const DRIVERS_FILE = path.join(__dirname, 'drivers.json');
+
+// Static files များကို public folder မှ တိုက်ရိုက်ဖတ်ရန်
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
-// ယာဉ်မောင်း မှတ်ပုံတင်စာမျက်နှာအတွက် သီးသန့် Route
+
+// ယာဉ်မောင်း မှတ်ပုံတင်စာမျက်နှာအတွက် Route သတ်မှတ်ချက်
 app.get('/register-driver.html', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'register-driver.html'));
-});
+ res.sendFile(path.join(__dirname, 'public', 'register-driver.html'));
+
 // မူရင်း ယာဉ်မောင်းဖိုင် မရှိသေးပါက အလွတ် array ဖြင့် စတင်ဖန်တီးခြင်း (အတုများ မပါတော့ပါ)
 if (!fs.existsSync(DRIVERS_FILE)) {
     fs.writeFileSync(DRIVERS_FILE, JSON.stringify([], null, 2));
