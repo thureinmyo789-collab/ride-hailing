@@ -31,6 +31,19 @@ app.get('/api/drivers', (req, res) => {
         res.status(500).json({ error: "မအောင်မြင်ပါ" });
     }
 });
+// ယာဉ်မောင်းအသစ် မှတ်ပုံတင်ခြင်း API
+app.post('/api/drivers', (req, res) => {
+    try {
+        const newDriver = req.body;
+        const data = fs.readFileSync(DRIVERS_FILE, 'utf8');
+        const drivers = JSON.parse(data);
+        drivers.push(newDriver);
+        fs.writeFileSync(DRIVERS_FILE, JSON.stringify(drivers, null, 2));
+        res.json({ success: true, message: "အောင်မြင်ပါသည်။" });
+    } catch (err) {
+        res.status(500).json({ error: "မအောင်မြင်ပါ။" });
+    }
+});
 
 // ယာဉ်မောင်း ဖျက်ဆီးသော (Delete) API အသစ်
 app.delete('/api/drivers/:phone', (req, res) => {
