@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driver Dashboard</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        #map { height: 100vh; width: 100%; }
+        body { margin: 0; padding: 0; font-family: sans-serif; }
+        .info-box { position: absolute; top: 10px; right: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+        #status { font-weight: bold; color: #007bff; }
+        .finish-btn { margin-top: 10px; padding: 8px 12px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; display: none; }
+        /* Routing text box ကို ဖျောက်ထားရန် CSS */
+        .leaflet-routing-container { display: none !important; }
+    </style>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+</head>
+<body>
+    <div class="info-box">
+        <h3>Driver Dashboard</h3>
+        <p id="status">ခရီးသည်များကို စောင့်ဆိုင်းနေသည်...</p>
+        <button id="finish-ride-btn" class="finish-btn" onclick="finishRide()">ခရီးစဉ် ပြီးဆုံးပြီ (Finish)</button>
+    </div>
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+
+    <script>
+        var map = L.map('map').setView([21.9833, 100.0833], 15);
+
+        // Google Hybrid Map (ဂြိုလ်တုပုံရိပ် + လမ်းနှင့် နေရာအမည်များ)
+        L.tileLayer('https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+        }).addTo(map);
+
+        var socket = io();
+        var passengersMarkers = {};
+        var destinationMarkers = {}; // ခရီးသည်သွားမည့်နေရာ မားကာများအတွက်
+        var driverMarker = null;
+        var routingControl = null;
+        var activePassengerId = null;
+        var targetLat = null, targetLng = null;
+        var destLat = null, destLng = null; // ခရီးသည်သွားမည့် နေရာ Lat/Lng
+        var arrivedAlerted = false;
+
+        var driverLat = null;
+        var driverLng = null;
+        var driverWatchId = null;
+
+        // ယာဉ်မောင်း မားကာ (အနီရောင်)
+        var redIcon = L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+        });
+
+        // ယာဉ်မောင်း၏ တည်နေရာကို GPS ဖြင့် Realtime အစပိုင်းတွင် ရယူပြသခြင်း နှင့် အဆက်အသွယ်မရှိချိန်၌ပါ Realtime ရွေ့လျားစေခြင်း
+        if (navigator.geolocation) {
+            driverWatchId = navigator.geolocation.watchPosition((position) => {
+                driverLat = position.coords.latitude;
+                driverLng = position.coords.longitude;
+                
+                if (!driverMarker) {
+                    driverMarker = L.marker([driverLat, driverLng], { icon: redIcon })
+                        .addTo(map)
+                        .bindPopup(`<b>သင့်တည်နေရာ (ယာဉ်မောင်း)</b><br><span style="font-size:12px; color:gray;">Lat: ${driverLat.toFixed(4)}, Lng: ${driverLng.toFixed(4)}</span>`)
+                        .openPopup();
+                    map.setView([driverLat, driverLng], 14);
+                } else {
+                    driverMarker.setLatLng([driverLat, driverLng]);
+                    driverMarker.setPopupContent(`<b>သင့်တည်နေရာ (ယာဉ်မောင်း)</b><br><span style="font-size:12px; color:gray;">Lat: ${driverLat.toFixed(4)}, Lng: ${driverLng.toFixed(4)}</span>`);
+                }
+
+                // ခရီးစဉ်လက်ခံထားချိန်တွင် ယာဉ်မောင်းတည်နေရာကို ခရီးသည်ဘက်သို့ ပို့ပေးခြင်းနှင့် လမ်းကြောင်းလိုင်း အပ်ဒိတ်လုပ်ခြင်း
+                if (activePassengerId && targetLat && targetLng) {
+                    socket.emit('driverLocationUpdate', { lat: driverLat, lng: driverLng, passengerId: activePassengerId });
+
+                    if (routingControl) {
+                        // လက်ခံထားလျှင် ယာဉ်မောင်း -> ခရီးသည် -> သွားမည့်နေရာ (Destination) သို့ လမ်းကြောင်းဆွဲပေးမည်
+                        let waypoints = [L.latLng(driverLat, driverLng), L.latLng(targetLat, targetLng)];
+                        if (destLat && destLng) {
+                            waypoints.push(L.latLng(destLat, destLng));
+                        }
+                        routingControl.setWaypoints(waypoints);
+                    }
+
+                    var distance = Math.abs(driverLat - targetLat) + Math.abs(driverLng - targetLng);
+                    if (distance < 0.0015 && !arrivedAlerted) {
+                        arrivedAlerted = true;
+                        playAlertVoice("ကားဆရာ ရောက်ရှိပါပြီ");
+                        socket.emit('driverArrived', { passengerId: activePassengerId });
+                    }
+                }
+            }, (error) => {
+                console.error("Driver GPS Error: " + error.message);
+            }, { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 });
+        }
+
+        function playAlertVoice(text) {
+            if ('speechSynthesis' in window) {
+                var utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'my-MM';
+                utterance.rate = 1.0;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        socket.on('liveLocationUpdate', (data) => {
+            var pId = data.id;
+            var pLat = data.lat;
+            var pLng = data.lng;
+            var pDestLat = data.destLat;
+            var pDestLng = data.destLng;
+
+            // အကယ်၍ ဤခရီးသည်နှင့် လက်ရှိ ချိတ်ဆက်(လက်ခံ)ထားပြီးသားဆိုလျှင် targetLat, targetLng နှင့် destination များကို အပ်ဒိတ်လုပ်ပါ
+            if (activePassengerId === pId) {
+                targetLat = pLat;
+                targetLng = pLng;
+                if (pDestLat && pDestLng) {
+                    destLat = pDestLat;
+                    destLng = pDestLng;
+                }
+                
+                if (driverLat && driverLng && routingControl) {
+                    let waypoints = [L.latLng(driverLat, driverLng), L.latLng(targetLat, targetLng)];
+                    if (destLat && destLng) {
+                        waypoints.push(L.latLng(destLat, destLng));
+                    }
+                    routingControl.setWaypoints(waypoints);
+                }
+            }
+
+            // ခရီးသည် လက်ရှိတည်နေရာ မားကာပြသခြင်း
+            if (!passengersMarkers[pId]) {
+                var marker = L.marker([pLat, pLng]).addTo(map)
+                    .bindPopup(`<b>ခရီးသည် တည်နေရာ</b><br><span style="font-size:12px; color:gray;">Lat: ${pLat.toFixed(4)}, Lng: ${pLng.toFixed(4)}</span><br><br><button onclick="acceptSpecificRide('${pId}', ${pLat}, ${pLng}, ${pDestLat}, ${pDestLng})" style='padding:6px 12px; background:#007bff; color:white; border:none; border-radius:4px; cursor:pointer;'>ဤခရီးစဉ်ကို လက်ခံမည်</button>`);
+                passengersMarkers[pId] = marker;
+            } else {
+                passengersMarkers[pId].setLatLng([pLat, pLng]);
+                passengersMarkers[pId].setPopupContent(`<b>ခရီးသည် တည်နေရာ</b><br><span style="font-size:12px; color:gray;">Lat: ${pLat.toFixed(4)}, Lng: ${pLng.toFixed(4)}</span><br><br><button onclick="acceptSpecificRide('${pId}', ${pLat}, ${pLng}, ${pDestLat}, ${pDestLng})" style='padding:6px 12px; background:#007bff; color:white; border:none; border-radius:4px; cursor:pointer;'>ဤခရီးစဉ်ကို လက်ခံမည်</button>`);
+            }
+
+            // ခရီးသည် သွားမည့်နေရာ (Destination) ရှိပါက မားကာသီးသန့်ပြသပေးခြင်း
+            if (pDestLat && pDestLng) {
+                if (!destinationMarkers[pId]) {
+                    var destMarker = L.marker([pDestLat, pDestLng], {
+                        icon: L.icon({
+                            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+                            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+                            iconSize: [25, 41],
+                            iconAnchor: [12, 41],
+                            popupAnchor: [1, -34],
+                            shadowSize: [41, 41]
+                        })
+                    }).addTo(map).bindPopup("<b>ခရီးသည် သွားမည့်နေရာ (Destination)</b>");
+                    destinationMarkers[pId] = destMarker;
+                } else {
+                    destinationMarkers[pId].setLatLng([pDestLat, pDestLng]);
+                }
+            }
+        });
+
+        window.acceptSpecificRide = function(passengerId, pLat, pLng, pDestLat, pDestLng) {
+            activePassengerId = passengerId;
+            targetLat = pLat;
+            targetLng = pLng;
+            destLat = pDestLat;
+            destLng = pDestLng;
+            arrivedAlerted = false;
+
+            socket.emit('acceptRide', { passengerId: passengerId, message: 'ယာဉ်မောင်းမှ သင့်ခရီးစဉ်ကို လက်ခံလိုက်ပါပြီ။' });            if (driverLat && driverLng) {
+            if (driverLat && driverLng) {
+                socket.emit('driverLocationUpdate', { lat: driverLat, lng: driverLng, passengerId: activePassengerId });
+            }
+            document.getElementById('status').innerText = 'ခရီးစဉ် လက်ခံထားပါသည်။';
+            document.getElementById('finish-ride-btn').style.display = 'block';
+
+            if (routingControl) { map.removeControl(routingControl); }
+            
+            if (driverLat && driverLng) {
+                let waypoints = [L.latLng(driverLat, driverLng), L.latLng(pLat, pLng)];
+                if (destLat && destLng) {
+                    waypoints.push(L.latLng(destLat, destLng));
+                }
+
+                routingControl = L.Routing.control({
+                    waypoints: waypoints,
+                    router: new L.Routing.osrmv1({
+                        serviceUrl: 'https://router.project-osrm.org/route/v1'
+                    }),
+                    routeWhileDragging: false,
+                    addWaypoints: false,
+                    draggableWaypoints: false,
+                    fitSelectedRoutes: true,
+                    showAlternatives: false,
+                    createMarker: function() { return null; }
+                }).addTo(map);
+            }
+        };
+
+        window.finishRide = function() {
+            if (activePassengerId) {
+                socket.emit('finishRide', { passengerId: activePassengerId });
+                if (passengersMarkers[activePassengerId]) {
+                    map.removeLayer(passengersMarkers[activePassengerId]);
+                    delete passengersMarkers[activePassengerId];
+                }
+                if (destinationMarkers[activePassengerId]) {
+                    map.removeLayer(destinationMarkers[activePassengerId]);
+                    delete destinationMarkers[activePassengerId];
+                }
+                if (routingControl) {
+                    map.removeControl(routingControl);
+                    routingControl = null;
+                }
+                document.getElementById('status').innerText = 'ခရီးစဉ် ပြီးဆုံးသွားပါပြီ။';
+                document.getElementById('finish-ride-btn').style.display = 'none';
+                activePassengerId = null;
+                targetLat = null;
+                targetLng = null;
+                destLat = null;
+                destLng = null;
+            }
+        };
+
+        socket.on('removePassengerMarker', (data) => {
+            if (passengersMarkers[data.passengerId]) {
+                map.removeLayer(passengersMarkers[data.passengerId]);
+                delete passengersMarkers[data.passengerId];
+            }
+            if (destinationMarkers[data.passengerId]) {
+                map.removeLayer(destinationMarkers[data.passengerId]);
+                delete destinationMarkers[data.passengerId];
+            }
+        });
+    </script>
+</body>
+</html>
+
