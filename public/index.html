@@ -28,8 +28,9 @@
             <input type="text" id="destinationInput" placeholder="သွားမည့်နေရာ (သို့) ဟိုတယ်နာမည် ရိုက်ထည့်ပါ...">
             <button onclick="searchDestination()">ရှာမည်</button>
         </div>
-        <!-- "တည်နေရာ စတင်မျှဝေမည်" ခလုတ်ကို ဖြုတ်လိုက်ပါပြီ -->
-        <div id="status">အခြေအနေ: တည်နေရာ မမျှဝေသေးပါ</div>
+        <!-- တည်နေရာ မျှဝေမည် ခလုတ်ကို ဖြုတ်ပြီး တည်နေရာရှာဖွေသည့် ခလုတ်ထည့်သွင်းထားသည် -->
+        <button id="locate-btn" onclick="checkAndGetLocation()">📍 မိမိတည်နေရာ ရှာမည်</button>
+        <div id="status">အခြေအနေ: တည်နေရာ မပို့ရသေးပါ</div>
         <div id="coords">Lat: -, Lng: -</div>
         <div id="driversList"></div>
     </div>
@@ -75,7 +76,7 @@
             }
         }
 
-        // ခရီးသည် တည်နေရာ အပ်ဒိတ်လုပ်သည့် နေရာ (Marker ပြသရန်နှင့် မျှဝေရန်)
+        // ခရီးသည် တည်နေရာ အပ်ဒိတ်လုပ်ရန် သီးသန့် ဖန်တီးထားသော လုပ်ဆောင်ချက်
         function updatePassengerMarker(lat, lng) {
             currentLat = lat;
             currentLng = lng;
@@ -90,13 +91,13 @@
 
             document.getElementById('coords').innerText = `Lat: ${currentLat.toFixed(4)}, Lng: ${currentLng.toFixed(4)}`;
 
-            // ခေါ်မည်ခလုတ်နှိပ်ပြီးမှ မျှဝေမည်သတ်မှတ်ထားပါက isSharing true ဖြစ်မှသာ socket ပို့မည်
+            // ယာဉ်မောင်းခေါ်ပြီးမှသာ (`isSharing = true`) တည်နေရာကို ယာဉ်မောင်းဆီသို့ တိုက်ရိုက်ပို့မည်
             if (isSharing) {
                 socket.emit('liveLocationUpdate', { lat: currentLat, lng: currentLng, destLat: destLat, destLng: destLng });
             }
         }
 
-        // GPS စစ်ဆေးခြင်းနှင့် အလိုအလျောက် တည်နေရာ ရယူခြင်း လုပ်ဆောင်ချက်
+        // တည်နေရာ (GPS) ရယူရန်နှင့် စစ်ဆေးရန် လုပ်ဆောင်ချက်
         function checkAndGetLocation() {
             if (!navigator.geolocation) {
                 alert("သင့်ဘရောက်ဇာသည် တည်နေရာကို မထောက်ပံ့ပါ။");
@@ -106,17 +107,26 @@
             // ပထမဦးစွာ တည်နေရာ ရယူနိုင်ခြင်း ရှိမရှိ စစ်ဆေးခြင်း
             navigator.geolocation.getCurrentPosition(
                 (position) => {
-                    updatePassengerMarker(position.coords.latitude, position.coords.longitude);
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    updatePassengerMarker(lat, lng);
                 },
                 (error) => {
                     if (error.code === error.PERMISSION_DENIED || error.code === error.POSITION_UNAVAILABLE) {
-                        alert("ကျေးဇူးပြု၍ ဖုန်း၏ Location (GPS) ကို ဖွင့်ပေးပါ။");
+                        let openSettings = confirm("ကျေးဇူးပြု၍ ဖုန်း၏ Location (GPS) ကို ဖွင့်ပါ။");
+                        if (openSettings) {
+                            // အသုံးပြုသူအား လိုအပ်ပါက ဆက်တင်ဖွင့်ရန် အသိပေးခြင်း
+                        }
                     }
                 },
-                { timeout: 10000 }
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                }
             );
 
-            // တည်နေရာ အမြဲတမ်း ခြေရာခံပြီး မြေပုံပေါ်တွင် အလိုအလျောက် ပြသနေရန်
+            // နောက်ခံတွင် တည်နေရာကို အမြဲတမ်း စောင့်ကြည့်နေမည်
             navigator.geolocation.watchPosition((position) => {
                 updatePassengerMarker(position.coords.latitude, position.coords.longitude);
             }, (error) => {
@@ -127,7 +137,6 @@
         // စာမျက်နှာ စတင်ဖွင့်လှစ်သည်နှင့် Location စစ်ဆေးရန် ခေါ်ယူခြင်း
         window.onload = () => {
             checkAndGetLocation();
-            fetchDrivers(); // စာမျက်နှာပွင့်သည်နှင့် ယာဉ်မောင်းစာရင်းပါ တင်ပြရန်
         };
 
         // မြေပုံပေါ်တွင် နေရာထောက်၍ သွားမည့်နေရာ သတ်မှတ်ခြင်း
@@ -188,12 +197,12 @@
                 });
         }
 
-        // "ကားဆရာခေါ်မည်" ခလုတ်နှိပ်မှသာ တည်နေရာ စတင်မျှဝေခြင်း
         function selectDriver(phone, name, car) {
             if (!currentLat || !currentLng) {
                 alert("သင့်လက်ရှိ တည်နေရာ မရသေးပါ။ ခဏစောင့်ပါ။");
                 return;
             }
+            // ကားခေါ်မှသာ တည်နေရာ စတင်မျှဝေမည်
             isSharing = true;
             document.getElementById('status').innerText = "အခြေအနေ: တည်နေရာ မျှဝေနေပါပြီ (" + name + " ကို ခေါ်ဆိုနေသည်)";
             
@@ -206,7 +215,7 @@
                 driverName: name,
                 carInfo: car
             });
-            alert(name + " ထံသို့ ကားခေါ်ဆိုမှုနှင့် တည်နေရာ ပို့လိုက်ပါပြီ။");
+            alert(name + " ထံသို့ ကားခေါ်ဆိုမှု ပို့လိုက်ပါပြီ။");
         }
 
         // ယာဉ်မောင်းမှ လက်ခံကြောင်း စာသားပြသခြင်း
@@ -220,11 +229,11 @@
             if (!driverMarker) {
                 driverMarker = L.marker([data.lat, data.lng], { icon: redIcon })
                     .addTo(map)
-                    .bindPopup(`<b>ယာဉ်မောင်း လာနေပါပြီ</b><br><span style="font-size:12px; color:gray;">Lat: ${data.lat.toFixed(4)}, Lng: ${data.lng.toFixed(4)}</span>`)
+                    .bindPopup(`<b>ယာဉ်မောင်း တည်နေရာ</b><br><span style="font-size:12px; color:gray;">Lat: ${data.lat.toFixed(4)}, Lng: ${data.lng.toFixed(4)}</span>`)
                     .openPopup();
             } else {
                 driverMarker.setLatLng([data.lat, data.lng]);
-                driverMarker.setPopupContent(`<b>ယာဉ်မောင်း လာနေပါပြီ</b><br><span style="font-size:12px; color:gray;">Lat: ${data.lat.toFixed(4)}, Lng: ${data.lng.toFixed(4)}</span>`);
+                driverMarker.setPopupContent(`<b>ယာဉ်မောင်း တည်နေရာ</b><br><span style="font-size:12px; color:gray;">Lat: ${data.lat.toFixed(4)}, Lng: ${data.lng.toFixed(4)}</span>`);
             }
         });
 
@@ -234,7 +243,9 @@
             document.getElementById('status').innerText = "ကားဆရာ ရောက်ရှိပါပြီ!";
         });
 
+        // ယာဉ်မောင်းဘက်မှ ခရီးစဉ် ပြီးဆုံးပါက တည်နေရာမျှဝေမှု ရပ်ဆိုင်းခြင်း
         socket.on('rideFinished', (data) => {
+            isSharing = false; // တည်နေရာ မျှဝေမှုကို ရပ်လိုက်မည်
             if (driverMarker) {
                 map.removeLayer(driverMarker);
                 driverMarker = null;
