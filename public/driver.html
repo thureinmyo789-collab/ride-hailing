@@ -47,11 +47,17 @@
                     alert("ဤဖုန်းနံပါတ်ဖြင့် ယာဉ်မောင်းစာရင်းသွင်းထားခြင်း မရှိပါ။ Admin ထံတွင် ကိုယ်တိုင် လျှောက်လွှာတင်ပါ။");
                     document.body.innerHTML = "<h2 style='text-align:center; margin-top:50px; color:red;'>Access Denied: ယာဉ်မောင်းစာရင်း မရှိပါ။ Admin ထံတွင် စာရင်းသွင်းပါ။</h2>";
                     throw new Error("Driver not registered");
+
                 } else {
-                    // ဝင်ရောက်ခွင့် အောင်မြင်ပါက ယာဉ်မောင်းအချက်အလက်ကို သိမ်းဆည်းထားနိုင်သည်
-                    localStorage.setItem('driverPhone', found.phone);
-                    localStorage.setItem('driverName', found.name);
-                }
+
+                // ဝင်ရောက်ခွင့် အောင်မြင်ပါက ယာဉ်မောင်းအချက်အလက်ကို သိမ်းဆည်းရန်
+                localStorage.setItem('driverPhone', found.phone);
+                localStorage.setItem('driverName', found.name);
+                
+                // ယာဉ်မောင်းအွန်လိုင်းရောက်ကြောင်း ဆာဗာသို့ သတင်းပို့ခြင်း
+                socket.emit('driverOnline', { phone: found.phone });
+            }
+ 
             } catch (err) {
                 console.error("Verification error:", err);
                 throw err;
