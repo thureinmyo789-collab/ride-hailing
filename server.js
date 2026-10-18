@@ -42,6 +42,28 @@ app.get('/api/drivers', (req, res) => {
     }
 });
 
+// ယာဉ်မောင်း အကောင့်ဝင်ခြင်း (Login/Verify) စစ်ဆေးသော API
+app.post('/api/driver-login', (req, res) => {
+    try {
+        const { phone } = req.body;
+        if (!phone) {
+            return res.status(400).json({ success: false, message: "ဖုန်းနံပါတ် ထည့်သွင်းရန် လိုအပ်ပါသည်။" });
+        }
+
+        const data = fs.readFileSync(DRIVERS_FILE, 'utf8');
+        const drivers = JSON.parse(data);
+
+        const driver = drivers.find(d => d.phone === phone);
+        if (!driver) {
+            return res.status(404).json({ success: false, message: "ဤဖုန်းနံပါတ်ဖြင့် မှတ်ပုံတင်ထားခြင်း မရှိသေးပါ။ ကျေးဇူးပြု၍ အရင် မှတ်ပုံတင်ပါ။" });
+        }
+
+        res.json({ success: true, message: "အကောင့်ဝင်ရောက်မှု အောင်မြင်ပါသည်။", driver });
+    } catch (err) {
+        res.status(500).json({ success: false, message: "ဆာဗာ အမှားအယွင်း ရှိနေပါသည်။" });
+    }
+});
+
 // ယာဉ်မောင်းအသစ် Register လုပ်သော API
 app.post('/api/register-driver', (req, res) => {
     try {
@@ -68,7 +90,7 @@ app.post('/api/register-driver', (req, res) => {
         drivers.push(newDriver);
         fs.writeFileSync(DRIVERS_FILE, JSON.stringify(drivers, null, 2));
 
-        res.json({ success: true, message: "ယာဉ်မောင်း မှတ်ပုံတင်ခြင်း အောင်မြင်ပါသည်။" });
+        res.json({ success: true, message: "ယာဉ်မောင်း မှတ်ပုံတင်ခြင်း အောင်မြင်ပါသည်။", driver: newDriver });
     } catch (err) {
         res.status(500).json({ success: false, message: "ဆာဗာ အမှားအယွင်း ရှိနေပါသည်။" });
     }
