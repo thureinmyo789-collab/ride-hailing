@@ -9,10 +9,12 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 app.use(express.static('public'));
+app.use(express.json());
+
+// Explicit route for register-driver.html
 app.get('/register-driver.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'register-driver.html'));
 });
-app.use(express.json());
 
 const DRIVERS_FILE = path.join(__dirname, 'drivers.json');
 
@@ -45,28 +47,6 @@ app.get('/api/drivers', (req, res) => {
     }
 });
 
-// ယာဉ်မောင်း အကောင့်ဝင်ခြင်း (Login/Verify) စစ်ဆေးသော API
-app.post('/api/driver-login', (req, res) => {
-    try {
-        const { phone } = req.body;
-        if (!phone) {
-            return res.status(400).json({ success: false, message: "ဖုန်းနံပါတ် ထည့်သွင်းရန် လိုအပ်ပါသည်။" });
-        }
-
-        const data = fs.readFileSync(DRIVERS_FILE, 'utf8');
-        const drivers = JSON.parse(data);
-
-        const driver = drivers.find(d => d.phone === phone);
-        if (!driver) {
-            return res.status(404).json({ success: false, message: "ဤဖုန်းနံပါတ်ဖြင့် မှတ်ပုံတင်ထားခြင်း မရှိသေးပါ။ ကျေးဇူးပြု၍ အရင် မှတ်ပုံတင်ပါ။" });
-        }
-
-        res.json({ success: true, message: "အကောင့်ဝင်ရောက်မှု အောင်မြင်ပါသည်။", driver });
-    } catch (err) {
-        res.status(500).json({ success: false, message: "ဆာဗာ အမှားအယွင်း ရှိနေပါသည်။" });
-    }
-});
-
 // ယာဉ်မောင်းအသစ် Register လုပ်သော API
 app.post('/api/register-driver', (req, res) => {
     try {
@@ -93,7 +73,7 @@ app.post('/api/register-driver', (req, res) => {
         drivers.push(newDriver);
         fs.writeFileSync(DRIVERS_FILE, JSON.stringify(drivers, null, 2));
 
-        res.json({ success: true, message: "ယာဉ်မောင်း မှတ်ပုံတင်ခြင်း အောင်မြင်ပါသည်။", driver: newDriver });
+        res.json({ success: true, message: "ယာဉ်မောင်း မှတ်ပုံတင်ခြင်း အောင်မြင်ပါသည်။" });
     } catch (err) {
         res.status(500).json({ success: false, message: "ဆာဗာ အမှားအယွင်း ရှိနေပါသည်။" });
     }
@@ -120,9 +100,26 @@ app.delete('/api/drivers/:phone', (req, res) => {
 });
 
 let passengersLocations = {};
+// အွန်လိုင်းပေါ်ရှိ ယာဉ်မောင်းများကို မှတ်သားရန် (phone -> socket.id)
+let onlineDrivers = {}; 
 
 io.on('connection', (socket) => {
     console.log('A user connected: ' + socket.id);
+
+    // ယာဉ်မောင်း Online ဝင်ရောက်လာမှုကို မှတ်သားခြင်း
+    socket.on('driverOnline', (data) => {
+        if (data && data.phone) {
+            onlineDrivers[data.phone] = socket.id;
+            socket.driverPhone = data.phone;
+            // အခြားသူများ (ခရီးသည်ဘက်) ထံသို့ ယာဉ်မောင်း အွန်လိုင်းဖြစ်ကြောင်း အသိပေးခြင်း
+            io.emit('updateDriverStatus', { phone: data.phone, status: 'online' });
+        }
+    });
+
+    // လက်ရှိ Online ဖြစ်နေသော ယာဉ်မောင်းစာရင်းကို တောင်းဆိုသည့်အခါ ပို့ပေးခြင်း
+    app.get('/api/online-drivers', (req, res) => {
+        res.json(onlineDrivers);
+    });
 
     socket.on('liveLocationUpdate', (data) => {
         passengersLocations[socket.id] = { 
@@ -136,7 +133,21 @@ io.on('connection', (socket) => {
         io.emit('liveLocationUpdate', passengersLocations[socket.id]);
     });
 
+    // ခရီးသည်မှ သီးသန့်ယာဉ်မောင်းထံသို့ ကားခေါ်ဆိုခြင်း (Ringtone အသံမြည်စေရန် Target Driver ဆီသို့ တိုက်ရိုက်ပို့မည်)
     socket.on('passengerRequestRide', (data) => {
+        // အကယ်၍ သီးသန့် ယာဉ်မောင်းဖုန်းနံပါတ်ကို ရွေးချယ်ထားပါက ထိုယာဉ်မောင်းဆီသို့ တိုက်ရိုက်ပေးပို့မည်
+        if (data.targetDriverPhone && onlineDrivers[data.targetDriverPhone]) {
+            io.to(onlineDrivers[data.targetDriverPhone]).emit('ringtoneAlert', {
+                passengerId: socket.id,
+                lat: data.lat,
+                lng: data.lng,
+                destLat: data.destLat,
+                destLng: data.destLng,
+                passengerName: data.passengerName || "ခရီးသည်"
+            });
+        }
+
+        // ယခင်အတိုင်း အများဆိုင် broadcast လုပ်ရန်အတွက်လည်း ဆက်ထားပေးပါသည်
         io.emit('passengerRequestedRide', {
             passengerId: socket.id,
             lat: data.lat,
@@ -179,6 +190,13 @@ io.on('connection', (socket) => {
 
     socket.on('disconnect', () => {
         console.log('User disconnected: ' + socket.id);
+        
+        // ယာဉ်မောင်း disconnect ဖြစ်သွားပါက Offline အဖြစ်သို့ ပြောင်းလဲခြင်း
+        if (socket.driverPhone) {
+            delete onlineDrivers[socket.driverPhone];
+            io.emit('updateDriverStatus', { phone: socket.driverPhone, status: 'offline' });
+        }
+
         delete passengersLocations[socket.id];
         io.emit('removePassengerMarker', { passengerId: socket.id });
     });
