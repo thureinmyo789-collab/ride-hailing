@@ -51,6 +51,10 @@
                     // ဝင်ရောက်ခွင့် အောင်မြင်ပါက ယာဉ်မောင်းအချက်အလက်ကို သိမ်းဆည်းထားနိုင်သည်
                     localStorage.setItem('driverPhone', found.phone);
                     localStorage.setItem('driverName', found.name);
+
+                    // အောင်မြင်စွာ ဝင်ရောက်ပြီးပါက ဆာဗာသို့ Online ဖြစ်ကြောင်း Signal ပို့ပေးမည်[span_1](start_span)[span_1](end_span)
+                    var socket = io();
+                    socket.emit('driverOnline', { phone: found.phone });
                 }
             } catch (err) {
                 console.error("Verification error:", err);
@@ -79,6 +83,24 @@
         var driverLat = null;
         var driverLng = null;
         var driverWatchId = null;
+
+        // ဖုန်း Ringtone အသံဖိုင် သတ်မှတ်ခြင်း (HTML5 Audio API)[span_2](start_span)[span_2](end_span)
+        var ringtoneAudio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+        ringtoneAudio.loop = true;
+
+        // ခရီးသည်မှ သီးသန့်ခေါ်ဆိုလာသည့်အခါ Ringtone အသံမြည်စေရန် လက်ခံခြင်း[span_3](start_span)[span_3](end_span)
+        socket.on('ringtoneAlert', (data) => {
+            ringtoneAudio.play().catch(e => console.log("Audio play blocked by browser:", e));
+            alert(data.passengerName + " မှ သင့်ထံသို့ ကားခေါ်ဆိုထားပါသည်။ အကြောင်းကြားစာကို လက်ခံရန် နှိပ်ပါ။");
+            
+            // ခရီးစဉ်ကို အလိုအလျောက် ပေါ်လာစေရန် သို့မဟုတ် လက်ခံရန် ပြင်ဆင်ခြင်း
+            if (data.passengerId) {
+                acceptSpecificRide(data.passengerId, data.lat, data.lng, data.destLat, data.destLng);
+            }
+            // Ringtone ရပ်တန့်ရန်
+            ringtoneAudio.pause();
+            ringtoneAudio.currentTime = 0;
+        });
 
         // ယာဉ်မောင်း မားကာ (အနီရောင်)
         var redIcon = L.icon({
@@ -203,6 +225,10 @@
             destLat = pDestLat;
             destLng = pDestLng;
             arrivedAlerted = false;
+
+            // အကယ်၍ Ringtone မြည်နေပါက ရပ်တန့်ရန်
+            ringtoneAudio.pause();
+            ringtoneAudio.currentTime = 0;
 
             socket.emit('acceptRide', { passengerId: passengerId, message: 'ယာဉ်မောင်းမှ သင့်ခရီးစဉ်ကို လက်ခံလိုက်ပါပြီ။' });
             document.getElementById('status').innerText = 'ခရီးစဉ် လက်ခံထားပါသည်။';
