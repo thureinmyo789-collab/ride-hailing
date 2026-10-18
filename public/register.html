@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - ယာဉ်မောင်း မှတ်ပုံတင်ခြင်း</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        body {
+            background-color: #f4f6f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            background: #ffffff;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 450px;
+        }
+        h2, h3 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+            font-size: 14px;
+        }
+        input[type="text"],
+        input[type="tel"],
+        input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
+            outline: none;
+        }
+        input:focus {
+            border-color: #007bff;
+        }
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .btn:hover {
+            background-color: #218838;
+        }
+        .btn-unlock {
+            background-color: #007bff;
+        }
+        .btn-unlock:hover {
+            background-color: #0056b3;
+        }
+        .btn-delete {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .btn-delete:hover {
+            background-color: #bd2130;
+        }
+        #alert-msg {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 14px;
+            display: none;
+            text-align: center;
+        }
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .alert-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        #admin-panel {
+            display: none;
+        }
+        .driver-list-section {
+            margin-top: 25px;
+            border-top: 2px solid #eee;
+            padding-top: 15px;
+        }
+        .driver-card {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .driver-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .driver-img {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .driver-details h4 {
+            font-size: 14px;
+            color: #333;
+        }
+        .driver-details p {
+            font-size: 12px;
+            color: #666;
+        }
+        .no-drivers {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            color: #6c757d;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Admin Password ခွင့်ပြုချက် တောင်းခံသည့် အပိုင်း -->
+    <div id="admin-auth-section">
+        <h2>Admin သီးသန့် စာမျက်နှာ</h2>
+        <div class="form-group" style="margin-top: 15px;">
+            <label for="admin-pass">Admin Password ရိုက်ထည့်ပါ:</label>
+            <input type="password" id="admin-pass" placeholder="လျှို့ဝှက်နံပါတ် ရိုက်ထည့်ပါ">
+        </div>
+        <button class="btn btn-unlock" onclick="unlockAdmin()">အကောင့်ဝင်မည်</button>
+    </div>
+
+    <!-- Admin Panel (မှတ်ပုံတင်ခြင်း + ယာဉ်မောင်းစာရင်း ပြသခြင်း) -->
+    <div id="admin-panel">
+        <h2>ယာဉ်မောင်း မှတ်ပုံတင်ရန်</h2>
+        <form id="driverRegisterForm" onsubmit="registerDriver(event)">
+            <div class="form-group">
+                <input type="text" id="name" placeholder="ယာဉ်မောင်းအမည်" required>
+            </div>
+            <div class="form-group">
+                <input type="tel" id="phone" placeholder="ဖုန်းနံပါတ်" required>
+            </div>
+            <div class="form-group">
+                <input type="text" id="car" placeholder="ကားအမျိုးအစား / နံပါတ်" required>
+            </div>
+            <div class="form-group">
+                <input type="text" id="image" placeholder="ဓာတ်ပုံ URL (မထည့်ပါက Default ပုံသုံးမည်)">
+            </div>
+            <button type="submit" class="btn">မှတ်ပုံတင်မည်</button>
+        </form>
+
+        <!-- မှတ်ပုံတင်ထားသော ယာဉ်မောင်းစာရင်း အပိုင်း -->
+        <div class="driver-list-section">
+            <h3>မှတ်ပုံတင်ထားသော ယာဉ်မောင်းစာရင်း</h3>
+            <div id="driversContainer">
+                <div class="no-drivers">ယာဉ်မောင်း စာရင်း မရှိသေးပါ။</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="alert-msg"></div>
+</div>
+
+<script>
+    // Admin Password (အစ်ကို စိတ်ကြိုက် ပြောင်းလဲနိုင်ပါသည်။)
+    const ADMIN_SECRET = "admin1234";
+
+    function unlockAdmin() {
+        const inputPass = document.getElementById('admin-pass').value;
+        const alertMsg = document.getElementById('alert-msg');
+
+        if (inputPass === ADMIN_SECRET) {
+            document.getElementById('admin-auth-section').style.display = 'none';
+            document.getElementById('admin-panel').style.display = 'block';
+            alertMsg.style.display = 'none';
+            loadDrivers(); // ယာဉ်မောင်းစာရင်းကို ဆာဗာမှ ဆွဲယူပြသမည်
+        } else {
+            showAlert('လျှို့ဝှက်နံပါတ် မှားယွင်းနေပါသည်။', false);
+        }
+    }
+
+    async function loadDrivers() {
+        try {
+            const res = await fetch('/api/drivers');
+            const drivers = await res.json();
+            const container = document.getElementById('driversContainer');
+
+            if (!Array.isArray(drivers) || drivers.length === 0) {
+                container.innerHTML = '<div class="no-drivers">ယာဉ်မောင်း စာရင်း မရှိသေးပါ။</div>';
+                return;
+            }
+
+            container.innerHTML = '';
+            drivers.forEach(d => {
+                const card = document.createElement('div');
+                card.className = 'driver-card';
+                card.innerHTML = `
+                    <div class="driver-info">
+                        <img src="${d.image || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100'}" class="driver-img" alt="Driver">
+                        <div class="driver-details">
+                            <h4>${d.name}</h4>
+                            <p>📞 ${d.phone}</p>
+                            <p>🚘 ${d.car}</p>
+                        </div>
+                    </div>
+                    <button class="btn-delete" onclick="deleteDriver('${d.phone}')">ဖျက်မည်</button>
+                `;
+                container.appendChild(card);
+            });
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    async function registerDriver(event) {
+        event.preventDefault();
+
+        const name = document.getElementById('name').value.trim();
+        const phone = document.getElementById('phone').value.trim();
+        const car = document.getElementById('car').value.trim();
+        const image = document.getElementById('image').value.trim();
+
+        try {
+            const response = await fetch('/api/register-driver', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ name, phone, car, image })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showAlert(result.message, true);
+                document.getElementById('driverRegisterForm').reset();
+                loadDrivers(); // စာရင်းအသစ်ကို ချက်ချင်း ပြန်လည် Updating လုပ်မည်
+            } else {
+                showAlert(result.message, false);
+            }
+        } catch (error) {
+            showAlert('ဆာဗာနှင့် ချိတ်ဆက်ရာတွင် အမှားအယွင်း ရှိနေပါသည်။', false);
+        }
+    }
+
+    async function deleteDriver(phone) {
+        if (!confirm('ဤယာဉ်မောင်းအား စာရင်းမှ ဖျက်ရန် သေချာပါသလား?')) return;
+
+        try {
+            const res = await fetch(`/api/drivers/${phone}`, { method: 'DELETE' });
+            const result = await res.json();
+            if (result.success) {
+                showAlert(result.message, true);
+                loadDrivers();
+            } else {
+                showAlert(result.message, false);
+            }
+        } catch (err) {
+            showAlert('ဖျက်ရာတွင် အမှားအယွင်း ရှိနေပါသည်။', false);
+        }
+    }
+
+    function showAlert(msg, isSuccess) {
+        const alertMsg = document.getElementById('alert-msg');
+        alertMsg.innerText = msg;
+        alertMsg.className = isSuccess ? 'alert-success' : 'alert-error';
+        alertMsg.style.display = 'block';
+    }
+</script>
+
+</body>
+</html>
