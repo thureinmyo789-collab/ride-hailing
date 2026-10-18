@@ -29,6 +29,35 @@
     <script src="/socket.io/socket.io.js"></script>
 
     <script>
+        // Driver Verification စနစ် (register-driver.html တွင် စာရင်းသွင်းထားခြင်း ရှိမရှိ စစ်ဆေးခြင်း)
+        (async function verifyDriverAccess() {
+            let driverPhone = prompt("ယာဉ်မောင်း ဝင်ရောက်ရန် သင်၏ ဖုန်းနံပါတ်ကို ထည့်ပါ:");
+            if (!driverPhone) {
+                alert("ဖုန်းနံပါတ် မထည့်သွင်းထားပါသဖြင့် ဝင်ရောက်ခွင့် မရှိပါ။ Admin ထံတွင် စာရင်းသွင်းပါ။");
+                document.body.innerHTML = "<h2 style='text-align:center; margin-top:50px; color:red;'>Access Denied: ယာဉ်မောင်းစာရင်းသွင်းထားခြင်း မရှိပါ။ Admin ထံတွင် စာရင်းသွင်းပါ။</h2>";
+                throw new Error("Unauthorized driver");
+            }
+
+            try {
+                let response = await fetch('/api/drivers');
+                let drivers = await response.json();
+                let found = drivers.find(d => d.phone === driverPhone.trim());
+
+                if (!found) {
+                    alert("ဤဖုန်းနံပါတ်ဖြင့် ယာဉ်မောင်းစာရင်းသွင်းထားခြင်း မရှိပါ။ Admin ထံတွင် ကိုယ်တိုင် လျှောက်လွှာတင်ပါ။");
+                    document.body.innerHTML = "<h2 style='text-align:center; margin-top:50px; color:red;'>Access Denied: ယာဉ်မောင်းစာရင်း မရှိပါ။ Admin ထံတွင် စာရင်းသွင်းပါ။</h2>";
+                    throw new Error("Driver not registered");
+                } else {
+                    // ဝင်ရောက်ခွင့် အောင်မြင်ပါက ယာဉ်မောင်းအချက်အလက်ကို သိမ်းဆည်းထားနိုင်သည်
+                    localStorage.setItem('driverPhone', found.phone);
+                    localStorage.setItem('driverName', found.name);
+                }
+            } catch (err) {
+                console.error("Verification error:", err);
+                throw err;
+            }
+        })();
+
         var map = L.map('map').setView([21.9833, 100.0833], 15);
 
         // Google Hybrid Map (ဂြိုလ်တုပုံရိပ် + လမ်းနှင့် နေရာအမည်များ)
@@ -240,5 +269,4 @@
     </script>
 </body>
 </html>
-
 
