@@ -9,6 +9,9 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 app.use(express.static('public'));
+app.get('/register-driver.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'register-driver.html'));
+});
 app.use(express.json());
 
 const DRIVERS_FILE = path.join(__dirname, 'drivers.json');
