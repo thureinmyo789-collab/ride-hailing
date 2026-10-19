@@ -297,18 +297,20 @@ socket.on('rideCompleted', () => {
             document.getElementById('status').innerText = "အခြေအနေ: တည်နေရာ မျှဝေနေပါပြီ (" + name + " ကို ခေါ်ဆိုနေသည်)";
             
             // သီးသန့်ယာဉ်မောင်းထံသို့ ringtone အသံမြည်စေရန် targetDriverPhone ဖြင့် ပို့ဆောင်ခြင်း[span_4](start_span)[span_4](end_span)
-                socket.emit('passengerRequestRide', {
+        socket.emit('passengerRequestRide', {
         lat: currentLat,
         lng: currentLng,
         destLat: destLat,
         destLng: destLng,
-        passengerPhone: document.getElementById('passengerPhoneInputId').value,
+        passengerPhone: (document.getElementById('passengerPhone') ? document.getElementById('passengerPhone').value : '') || (document.getElementById('phone') ? document.getElementById('phone').value : ''),
         passengerName: "ခရီးသည်",
         targetDriverPhone: phone,
         driverPhone: phone,
         driverName: name,
         carInfo: car
     });
+
+
 
             alert(name + " ထံသို့ ကားခေါ်ဆိုမှု ပို့လိုက်ပါပြီ။ ဖုန်း Ringtone အသံမြည်လာပါလိမ့်မည်။");
         }
