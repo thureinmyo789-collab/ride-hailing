@@ -28,6 +28,54 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
     <script src="/socket.io/socket.io.js"></script>
+async function verifyDriverAccess() {
+    // LocalStorage မှ အရင်စစ်မည်
+    let driverPhone = localStorage.getItem('driverPhone');
+    let driverPasscode = localStorage.getItem('driverPasscode');
+
+    if (!driverPhone || !driverPasscode) {
+        driverPhone = prompt("ယာဉ်မောင်း ဝင်ရောက်ရန် သင်၏ ဖုန်းနံပါတ် ထည့်ပါ:");
+        if (!driverPhone) {
+            alert("ဖုန်းနံပါတ် မထည့်သွင်းထားပါသဖြင့် ဝင်ရောက်ခွင့် မရှိပါ။");
+            window.location.reload();
+            return;
+        }
+
+        driverPasscode = prompt("Admin ထံမှ ရရှိသော ၆ လုံးပါ လျှို့ဝှက်နံပါတ် (Passcode) ကို ထည့်ပါ:");
+        if (!driverPasscode) {
+            alert("လျှို့ဝှက်နံပါတ် မထည့်သွင်းထားပါသဖြင့် ဝင်ရောက်ခွင့် မရှိပါ။");
+            window.location.reload();
+            return;
+        }
+    }
+
+    // Server သို့ login စစ်ဆေးရန် ပို့မည်
+    try {
+        let response = await fetch('/api/driver-login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: driverPhone, passcode: driverPasscode })
+        });
+        let result = await response.json();
+
+        if (result.success) {
+            // အောင်မြင်ပါက LocalStorage တွင် အမြဲမှတ်ထားမည်
+            localStorage.setItem('driverPhone', driverPhone);
+            localStorage.setItem('driverPasscode', driverPasscode);
+            console.log("Logged in successfully as:", result.driverName);
+        } else {
+            alert(result.message);
+            localStorage.removeItem('driverPhone');
+            localStorage.removeItem('driverPasscode');
+            window.location.reload();
+        }
+    } catch (err) {
+        console.error("Login verification error:", err);
+    }
+}
+
+// စာမျက်နှာ စတင်ချိန်တွင် စစ်ဆေးရန် ခေါ်ယူမည်
+verifyDriverAccess();
 
     <script>
         // Driver Verification စနစ် (register-driver.html တွင် စာရင်းသွင်းထားခြင်း ရှိမရှိ စစ်ဆေးခြင်း)
