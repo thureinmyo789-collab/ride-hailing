@@ -134,7 +134,8 @@ io.on('connection', (socket) => {
     });
 
     // ခရီးသည်မှ သီးသန့် ယာဉ်မောင်းထံသို့ ကားခေါ်ဆိုခြင်း (Ringtone အသံမြည်စေရန် Target ဖြင့် ပို့ခြင်း)
-socket.on('passengerRequestRide', (data) => {
+socket.on('passengerRequestedRide', (data) => {
+
     let targetPhone = data.targetDriverPhone || data.driverPhone;
     if (targetPhone && onlineDrivers[targetPhone]) {
         io.to(onlineDrivers[targetPhone]).emit('passengerRequestedRide', {
