@@ -267,11 +267,29 @@
                 map.removeLayer(passengersMarkers[data.passengerId]);
                 delete passengersMarkers[data.passengerId];
             }
+
             if (destinationMarkers[data.passengerId]) {
                 map.removeLayer(destinationMarkers[data.passengerId]);
                 delete destinationMarkers[data.passengerId];
             }
         });
+    
+    socket.on('passengerRequestedRide', (data) => {
+    let ringtoneAudio = document.getElementById('ringtoneAudio');
+    if (ringtoneAudio) {
+        ringtoneAudio.play().catch(e => console.log("Audio play error:", e));
+    }
+
+    let pName = data.passengerName || "ခရီးသည်";
+    let pPhone = data.passengerPhone || "ဖုန်းနံပါတ်မရှိပါ";
+    
+    alert(pName + " (" + pPhone + ") မှ သင့်ထံသို့ ကားခေါ်ဆိုထားပါသည်။");
+
+    if (data.passengerId) {
+        acceptSpecificRide(data.passengerId, data.lat, data.lng, data.destLat, data.destLng);
+    }
+});
+
     </script>
 </body>
 </html>
