@@ -218,7 +218,8 @@ socket.on('passengerRequestedRide', (data) => {
             lng: data.lng,
             destLat: data.destLat,
             destLng: data.destLng,
-            passengerName: data.passengerName || "ခရီးသည်"
+            passengerName: data.passengerName || "ခရီးသည်",
+            passengerPhone: data.passengerPhone
         });
     }
 });
