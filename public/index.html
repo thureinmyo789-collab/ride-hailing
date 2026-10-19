@@ -28,7 +28,12 @@
     <div id="map"></div>
 
     <div class="panel">
-        <div class="search-box">
+        <div class="search-box"><div style="margin-bottom: 10px; padding: 8px; background: #f9f9f9; border-radius: 6px;">
+    <h4 style="margin: 0 0 5px 0; font-size: 14px; color: #333;">ခရီးသည် သတင်းအချက်အလက်</h4>
+    <input type="tel" id="passenger-phone" placeholder="ဖုန်းနံပါတ် ရိုက်ထည့်ပါ (ဥပမာ 09...)" style="width: 100%; padding: 6px; box-sizing: border-box; font-size: 14px;" />
+    <p id="passenger-status" style="margin: 5px 0 0 0; font-size: 13px; color: #007bff; font-weight: bold;">ယာဉ်မောင်း ရွေးချယ်ခေါ်ယူပါ...</p>
+</div>
+
             <input type="text" id="destinationInput" placeholder="သွားမည့်နေရာ (သို့) ဟိုတယ်နာမည် ရိုက်ထည့်ပါ...">
             <button onclick="searchDestination()">ရှာမည်</button>
         </div>
@@ -58,6 +63,61 @@
         var currentLng = null;
         var destLat = null;
         var destLng = null;
+// ၁။ ခရီးသည် ဖုန်းနံပါတ် ရယူခြင်း
+function getPassengerPhone() {
+    let phoneInput = document.getElementById('passenger-phone').value.trim();
+    if (!phoneInput) {
+        let savedPhone = localStorage.getItem('passengerPhone');
+        if (savedPhone) return savedPhone;
+        return null;
+    }
+    localStorage.setItem('passengerPhone', phoneInput);
+    return phoneInput;
+}
+
+// ၂။ ယာဉ်မောင်းအား ခေါ်ယူသည့် Function ပြင်ဆင်ခြင်း
+function selectDriver(driverId) {
+    let passengerPhone = getPassengerPhone();
+    if (!passengerPhone) {
+        alert("ကျေးဇူးပြု၍ ဖုန်းနံပါတ် အရင်ရိုက်ထည့်ပါ!");
+        return;
+    }
+
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(position => {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+
+            // Socket မှတစ်ဆင့် ယာဉ်မောင်းထံ ဖုန်းနံပါတ်နှင့် Location ပို့မည်
+            socket.emit('requestRide', {
+                driverId: driverId,
+                passengerPhone: passengerPhone,
+                lat: lat,
+                lng: lng
+            });
+
+            document.getElementById('passenger-status').innerText = "ယာဉ်မောင်းထံ ခေါ်ယူမှု ပို့ပြီးပါပြီ။ စောင့်ဆိုင်းပေးပါ...";
+        }, err => {
+            alert("သင့် တည်နေရာ (GPS) ကို ရယူ၍ မရပါ: " + err.message);
+        });
+    }
+}
+
+// ၃။ ယာဉ်မောင်းက ခရီးစဉ် လက်ခံလိုက်သည့်အခါ အသိပေးချက်နှင့် Marker ပြသခြင်း
+socket.on('rideAccepted', (data) => {
+    document.getElementById('passenger-status').innerText = "ကျေးဇူးပြု၍ ခဏစောင့်ပါ၊ ယာဉ်မောင်း လာနေပါသည်။";
+    
+    // ယာဉ်မောင်း၏ တည်နေရာ Marker ကို တိတိကျကျ ပြသပေးခြင်း
+    if (data.driverLat && data.driverLng) {
+        updateDriverMarkerOnMap(data.driverLat, data.driverLng);
+    }
+});
+
+// ၄။ ယာဉ်မောင်းက ခရီးစဉ် ပြီးဆုံးကြောင်း နှိပ်လိုက်သည့်အခါ Marker စာရင်းများ ရှင်းလင်းခြင်း
+socket.on('rideCompleted', () => {
+    document.getElementById('passenger-status').innerText = "ခရီးစဉ် ပြီးဆုံးပါပြီ။ ကျေးဇူးတင်ပါသည်။";
+    clearDriverMarkers();
+});
         
         // လက်ရှိ အွန်လိုင်းပေါ်ရှိ ယာဉ်မောင်းဖုန်းနံပါတ်များကို သိမ်းဆည်းရန်
         var onlineDriversMap = {};
