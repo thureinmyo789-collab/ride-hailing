@@ -298,17 +298,18 @@ socket.on('rideCompleted', () => {
             
             // သီးသန့်ယာဉ်မောင်းထံသို့ ringtone အသံမြည်စေရန် targetDriverPhone ဖြင့် ပို့ဆောင်ခြင်း[span_4](start_span)[span_4](end_span)
         socket.emit('passengerRequestRide', {
-        lat: currentLat,
-        lng: currentLng,
-        destLat: destLat,
-        destLng: destLng,
-        passengerPhone: (document.getElementById('passengerPhone') ? document.getElementById('passengerPhone').value : '') || (document.getElementById('phone') ? document.getElementById('phone').value : ''),
-        passengerName: "ခရီးသည်",
-        targetDriverPhone: phone,
-        driverPhone: phone,
-        driverName: name,
-        carInfo: car
-    });
+    lat: currentLat,
+    lng: currentLng,
+    destLat: destLat,
+    destLng: destLng,
+    passengerPhone: document.getElementById('passengerPhone').value,
+    passengerName: "ခရီးသည်",
+    targetDriverPhone: phone,
+    driverPhone: phone,
+    driverName: name,
+    carInfo: car
+});
+
 
 
 
