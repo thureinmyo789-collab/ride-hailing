@@ -144,14 +144,16 @@ verifyDriverAccess();
         ringtoneAudio.play().catch(e => console.log("Audio play error:", e));
     }
 
-    // ခရီးသည် အမည် သို့မဟုတ် ဖုန်းနံပါတ် ပြသခြင်း
-    let passengerContact = data.passengerPhone ? `${data.passengerName} (${data.passengerPhone})` : data.passengerName;
-    alert(passengerContact + " မှ သင့်ထံသို့ ကားခေါ်ဆိုထားပါသည်");
+    // ခရီးသည် ဖုန်းနံပါတ်နှင့် အမည်ကို ပြသခြင်း
+    let passengerPhone = data.passengerPhone || "ဖုန်းနံပါတ်မရှိပါ";
+    let passengerName = data.passengerName || "ခရီးသည်";
+    alert(passengerName + " (" + passengerPhone + ") မှ သင့်ထံသို့ ကားခေါ်ဆိုထားပါသည်။");
 
     if (data.passengerId) {
         acceptSpecificRide(data.passengerId, data.lat, data.lng, data.destLat, data.destLng);
     }
-});let passengerMarker = null;
+});
+let passengerMarker = null;
 
 function acceptSpecificRide(passengerId, lat, lng, destLat, destLng) {
     activePassengerId = passengerId;
