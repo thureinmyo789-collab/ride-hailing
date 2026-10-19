@@ -10,6 +10,80 @@ const io = new Server(server);
 
 app.use(express.static('public'));
 app.use(express.json());
+// ယာဉ်မောင်း မှတ်ပုံတင်ခြင်းနှင့် လော့ဂ်အင်စစ်ဆေးခြင်း API များ
+app.post('/api/register-driver', (req, res) => {
+    const { phone, name, passcode } = req.body;
+    if (!phone) {
+        return res.status(400).json({ success: false, message: "ဖုန်းနံပါတ် လိုအပ်ပါသည်။" });
+    }
+    
+    // 6-digit passcode သို့မဟုတ် Admin သတ်မှတ်ပေးသည့် passcode
+    const code = passcode || Math.floor(100000 + Math.random() * 900000).toString();
+
+    // drivers.json ဖိုင်ထဲသို့ သိမ်းဆည်းရန် စီစဉ်ခြင်း
+    let drivers = [];
+    if (fs.existsSync(DRIVERS_FILE)) {
+        try {
+            drivers = JSON.parse(fs.readFileSync(DRIVERS_FILE, 'utf8'));
+        } catch (e) {
+            drivers = [];
+        }
+    }
+
+    let existing = drivers.find(d => d.phone === phone);
+    if (existing) {
+        existing.passcode = code;
+        existing.name = name || existing.name;
+    } else {
+        drivers.push({
+            phone: phone,
+            name: name || "Driver",
+            passcode: code,
+            approved: true,
+            registeredAt: new Date()
+        });
+    }
+
+    fs.writeFileSync(DRIVERS_FILE, JSON.stringify(drivers, null, 2));
+
+    console.log(`Driver registered: ${phone} with code: ${code}`);
+    res.json({ success: true, message: "ယာဉ်မောင်း စာရင်းသွင်းမှု အောင်မြင်ပါသည်", passcode: code });
+});
+
+app.post('/api/driver-login', (req, res) => {
+    const { phone, passcode } = req.body;
+    
+    let drivers = [];
+    if (fs.existsSync(DRIVERS_FILE)) {
+        try {
+            drivers = JSON.parse(fs.readFileSync(DRIVERS_FILE, 'utf8'));
+        } catch (e) {
+            drivers = [];
+        }
+    }
+
+    let driver = drivers.find(d => d.phone === phone);
+
+    if (!driver) {
+        return res.json({ 
+            success: false, 
+            message: "ဤဖုန်းနံပါတ်ဖြင့် ယာဉ်မောင်းစာရင်းသွင်းထားခြင်း မရှိပါ။ Admin ထံတွင် ကိုယ်တိုင် စာရင်းသွင်းပါ။" 
+        });
+    }
+
+    if (driver.passcode !== passcode) {
+        return res.json({ 
+            success: false, 
+            message: "Admin ထံမှ ရရှိသော ၆ လုံးပါ လျှို့ဝှက်နံပါတ် (Passcode) မှားယွင်းနေပါသည်။" 
+        });
+    }
+
+    res.json({ 
+        success: true, 
+        message: "ဝင်ရောက်မှု အောင်မြင်ပါသည်", 
+        driverName: driver.name 
+    });
+});
 
 // Explicit route for register-driver.html
 app.get('/register-driver.html', (req, res) => {
