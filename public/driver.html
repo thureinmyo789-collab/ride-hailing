@@ -172,15 +172,19 @@
                 }
             }
 
-            // ခရီးသည် လက်ရှိတည်နေရာ မားကာပြသခြင်း
-            if (!passengersMarkers[pId]) {
-                var marker = L.marker([pLat, pLng]).addTo(map)
-                    .bindPopup(`<b>ခရီးသည် တည်နေရာ</b><br><span style="font-size:12px; color:gray;">Lat: ${pLat.toFixed(4)}, Lng: ${pLng.toFixed(4)}</span><br><br><button onclick="acceptSpecificRide('${pId}', ${pLat}, ${pLng}, ${pDestLat}, ${pDestLng})" style='padding:6px 12px; background:#007bff; color:white; border:none; border-radius:4px; cursor:pointer;'>ဤခရီးစဉ်ကို လက်ခံမည်</button>`);
-                passengersMarkers[pId] = marker;
-            } else {
-                passengersMarkers[pId].setLatLng([pLat, pLng]);
-                passengersMarkers[pId].setPopupContent(`<b>ခရီးသည် တည်နေရာ</b><br><span style="font-size:12px; color:gray;">Lat: ${pLat.toFixed(4)}, Lng: ${pLng.toFixed(4)}</span><br><br><button onclick="acceptSpecificRide('${pId}', ${pLat}, ${pLng}, ${pDestLat}, ${pDestLng})" style='padding:6px 12px; background:#007bff; color:white; border:none; border-radius:4px; cursor:pointer;'>ဤခရီးစဉ်ကို လက်ခံမည်</button>`);
-            }
+            // ခရီးသည် လက်ရှိတည်နေရာ မားကာပြသခြင်း နှင့် ဖုန်းနံပါတ်ပါ ထည့်သွင်းပြသခြင်း
+let phoneDisplay = data.passengerPhone ? `<br>ဖုန်း: ${data.passengerPhone}` : '<br>ဖုန်း: မရှိပါ';
+let passengerNameDisplay = data.passengerName || "ခရီးသည်";
+
+if (!passengersMarkers[pId]) {
+    var marker = L.marker([pLat, pLng]).addTo(map)
+        .bindPopup(`<b>${passengerNameDisplay} တည်နေရာ</b>${phoneDisplay}<br>Lat: ${pLat}, Lng: ${pLng}`);
+    passengersMarkers[pId] = marker;
+} else {
+    passengersMarkers[pId].setLatLng([pLat, pLng]);
+    passengersMarkers[pId].setPopupContent(`<b>${passengerNameDisplay} တည်နေရာ</b>${phoneDisplay}<br>Lat: ${pLat}, Lng: ${pLng}`);
+}
+
 
             // ခရီးသည် သွားမည့်နေရာ (Destination) ရှိပါက မားကာသီးသန့်ပြသပေးခြင်း
             if (pDestLat && pDestLng) {
