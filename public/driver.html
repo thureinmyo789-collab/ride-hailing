@@ -282,13 +282,18 @@
 
     let pName = data.passengerName || "ခရီးသည်";
     let pPhone = data.passengerPhone || "ဖုန်းနံပါတ်မရှိပါ";
-    
-    alert(pName + " (" + pPhone + ") မှ သင့်ထံသို့ ကားခေါ်ဆိုထားပါသည်။");
+
+    // အချက်အလက်များကို status စာသားနေရာတွင် ဖော်ပြခြင်း
+    let statusEl = document.getElementById('status');
+    if (statusEl) {
+        statusEl.innerText = pName + " (" + pPhone + ") မှ ကားခေါ်ဆိုထားပါသည်။";
+    }
 
     if (data.passengerId) {
         acceptSpecificRide(data.passengerId, data.lat, data.lng, data.destLat, data.destLng);
     }
 });
+
 
     </script>
 </body>
