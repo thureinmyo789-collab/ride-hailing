@@ -89,7 +89,7 @@
         ringtoneAudio.loop = true;
 
         // ခရီးသည်မှ သီးသန့်ခေါ်ဆိုလာသည့်အခါ Ringtone အသံမြည်စေရန် လက်ခံခြင်း[span_3](start_span)[span_3](end_span)
-        socket.on('ringtoneAlert', (data) => {
+        socket.on('passengerRequestedRide', (data) => {
             ringtoneAudio.play().catch(e => console.log("Audio play blocked by browser:", e));
             alert(data.passengerName + " မှ သင့်ထံသို့ ကားခေါ်ဆိုထားပါသည်။ အကြောင်းကြားစာကို လက်ခံရန် နှိပ်ပါ။");
             
