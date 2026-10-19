@@ -133,32 +133,23 @@ io.on('connection', (socket) => {
         io.emit('liveLocationUpdate', passengersLocations[socket.id]);
     });
 
-    // ခရီးသည်မှ သီးသန့်ယာဉ်မောင်းထံသို့ ကားခေါ်ဆိုခြင်း (Ringtone အသံမြည်စေရန် Target Driver ဆီသို့ တိုက်ရိုက်ပို့မည်)
-    socket.on('passengerRequestRide', (data) => {
-        // အကယ်၍ သီးသန့် ယာဉ်မောင်းဖုန်းနံပါတ်ကို ရွေးချယ်ထားပါက ထိုယာဉ်မောင်းဆီသို့ တိုက်ရိုက်ပေးပို့မည်
-        if (data.targetDriverPhone && onlineDrivers[data.targetDriverPhone]) {
-            io.to(onlineDrivers[data.targetDriverPhone]).emit('ringtoneAlert', {
-                passengerId: socket.id,
-                lat: data.lat,
-                lng: data.lng,
-                destLat: data.destLat,
-                destLng: data.destLng,
-                passengerName: data.passengerName || "ခရီးသည်"
-            });
-        }
-
-        // ယခင်အတိုင်း အများဆိုင် broadcast လုပ်ရန်အတွက်လည်း ဆက်ထားပေးပါသည်
-        io.emit('passengerRequestedRide', {
+    // ခရီးသည်မှ သီးသန့် ယာဉ်မောင်းထံသို့ ကားခေါ်ဆိုခြင်း (Ringtone အသံမြည်စေရန် Target ဖြင့် ပို့ခြင်း)
+socket.on('passengerRequestRide', (data) => {
+    let targetPhone = data.targetDriverPhone || data.driverPhone;
+    if (targetPhone && onlineDrivers[targetPhone]) {
+        io.to(onlineDrivers[targetPhone]).emit('passengerRequestedRide', {
             passengerId: socket.id,
             lat: data.lat,
             lng: data.lng,
             destLat: data.destLat,
             destLng: data.destLng,
-            driverPhone: data.driverPhone,
-            driverName: data.driverName,
-            carInfo: data.carInfo
+            passengerName: data.passengerName || "ခရီးသည်"
         });
-    });
+    }
+});
+
+
+           
 
     socket.on('acceptRide', (data) => {
         io.to(data.passengerId).emit('rideAccepted', {
