@@ -200,6 +200,13 @@
 
 <script>
     // Admin Password (အစ်ကို စိတ်ကြိုက် ပြောင်းလဲနိုင်ပါသည်။)
+// စာမျက်နှာစတင်ဖွင့်ချင်း မှတ်ပုံတင်ပြီးသား ဖုန်းနံပါတ် ရှိမရှိ စစ်ဆေးခြင်း
+window.onload = function() {
+    let savedPhone = localStorage.getItem('registeredDriverPhone');
+    if (savedPhone) {
+        window.location.href = 'driver.html?phone=' + savedPhone;
+    }
+};
     const ADMIN_SECRET = "admin8456";
 
     function unlockAdmin() {
@@ -269,6 +276,13 @@
             const result = await response.json();
 
             if (result.success) {
+    if (result.success) {
+        localStorage.setItem('registeredDriverPhone', phone); // ယာဉ်မောင်းဖုန်းနံပါတ်ကို localStorage တွင် သိမ်းဆည်းရန်
+        showAlert(result.message, true);
+        document.getElementById('driverRegisterForm').reset();
+        loadDrivers(); 
+    }
+
                 showAlert(result.message, true);
                 document.getElementById('driverRegisterForm').reset();
                 loadDrivers(); // စာရင်းအသစ်ကို ချက်ချင်း ပြန်လည် Updating လုပ်မည်
