@@ -139,8 +139,70 @@ verifyDriverAccess();
 
         // ခရီးသည်မှ သီးသန့်ခေါ်ဆိုလာသည့်အခါ Ringtone အသံမြည်စေရန် လက်ခံခြင်း[span_3](start_span)[span_3](end_span)
         socket.on('passengerRequestedRide', (data) => {
-            ringtoneAudio.play().catch(e => console.log("Audio play blocked by browser:", e));
-            alert(data.passengerName + " မှ သင့်ထံသို့ ကားခေါ်ဆိုထားပါသည်။ အကြောင်းကြားစာကို လက်ခံရန် နှိပ်ပါ။");
+    let ringtoneAudio = document.getElementById('ringtoneAudio');
+    if (ringtoneAudio) {
+        ringtoneAudio.play().catch(e => console.log("Audio play error:", e));
+    }
+
+    // ခရီးသည် အမည် သို့မဟုတ် ဖုန်းနံပါတ် ပြသခြင်း
+    let passengerContact = data.passengerPhone ? `${data.passengerName} (${data.passengerPhone})` : data.passengerName;
+    alert(passengerContact + " မှ သင့်ထံသို့ ကားခေါ်ဆိုထားပါသည်");
+
+    if (data.passengerId) {
+        acceptSpecificRide(data.passengerId, data.lat, data.lng, data.destLat, data.destLng);
+    }
+});let passengerMarker = null;
+
+function acceptSpecificRide(passengerId, lat, lng, destLat, destLng) {
+    activePassengerId = passengerId;
+    targetLat = lat;
+    targetLng = lng;
+    destLat = destLat;
+    destLng = destLng;
+
+    let ringtoneAudio = document.getElementById('ringtoneAudio');
+    if (ringtoneAudio) {
+        ringtoneAudio.pause();
+        ringtoneAudio.currentTime = 0;
+    }
+
+    if (passengerMarker) {
+        map.removeLayer(passengerMarker);
+    }
+    passengerMarker = L.marker([lat, lng]).addTo(map)
+        .bindPopup("ခရီးသည်၏ တည်နေရာ")
+        .openPopup();
+
+    socket.emit('acceptRide', { passengerId: passengerId, driverId: socket.id });
+    document.getElementById('status').innerText = "ခရီးသည်ဆီသို့ သွားနေပါသည်...";
+}
+
+function finishRide() {
+    if (!activePassengerId) {
+        alert("လက်ရှိ လုပ်ဆောင်နေသော ခရီးစဉ်မရှိပါ။");
+        return;
+    }
+
+    socket.emit('finishRide', { passengerId: activePassengerId });
+
+    if (passengerMarker) {
+        map.removeLayer(passengerMarker);
+        passengerMarker = null;
+    }
+    if (routingControl) {
+        map.removeControl(routingControl);
+        routingControl = null;
+    }
+
+    activePassengerId = null;
+    targetLat = null;
+    targetLng = null;
+
+    document.getElementById('status').innerText = "ခရီးစဉ် ပြီးဆုံးပါပြီ။ ခရီးသည်များကို စောင့်ဆိုင်းနေသည်...";
+    alert("ခရီးစဉ် ပြီးဆုံးပါပြီ။");
+}
+
+
             
             // ခရီးစဉ်ကို အလိုအလျောက် ပေါ်လာစေရန် သို့မဟုတ် လက်ခံရန် ပြင်ဆင်ခြင်း
             if (data.passengerId) {
