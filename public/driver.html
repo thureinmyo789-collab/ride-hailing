@@ -176,14 +176,16 @@
 let phoneDisplay = data.passengerPhone ? `<br>ဖုန်း: ${data.passengerPhone}` : '<br>ဖုန်း: မရှိပါ';
 let passengerNameDisplay = data.passengerName || "ခရီးသည်";
 
+let popupContent = `<b>${passengerNameDisplay} တည်နေရာ</b>${phoneDisplay}<br>Lat: ${pLat.toFixed(5)}, Lng: ${pLng.toFixed(5)}<br><br><button onclick="acceptSpecificRide('${pId}', ${pLat}, ${pLng}, ${data.destLat || 'null'}, ${data.destLng || 'null'})" style="background-color: #008CBA; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer;">ဤခရီးစဉ်ကို လက်ခံမည်</button>`;
+
 if (!passengersMarkers[pId]) {
-    var marker = L.marker([pLat, pLng]).addTo(map)
-        .bindPopup(`<b>${passengerNameDisplay} တည်နေရာ</b>${phoneDisplay}<br>Lat: ${pLat}, Lng: ${pLng}`);
+    var marker = L.marker([pLat, pLng]).addTo(map).bindPopup(popupContent);
     passengersMarkers[pId] = marker;
 } else {
     passengersMarkers[pId].setLatLng([pLat, pLng]);
-    passengersMarkers[pId].setPopupContent(`<b>${passengerNameDisplay} တည်နေရာ</b>${phoneDisplay}<br>Lat: ${pLat}, Lng: ${pLng}`);
+    passengersMarkers[pId].setPopupContent(popupContent);
 }
+
 
 
             // ခရီးသည် သွားမည့်နေရာ (Destination) ရှိပါက မားကာသီးသန့်ပြသပေးခြင်း
