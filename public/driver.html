@@ -206,17 +206,23 @@ if (!passengersMarkers[pId]) {
                     destinationMarkers[pId].setLatLng([pDestLat, pDestLng]);
                 }
             }
-        });// ခရီးသည် တည်နေရာ အချိန်နှင့်တစ်ပြေးညီ ရွေ့လျားမှုကို လက်ခံရန်
+        });
+
+// ခရီးသည် တည်နေရာ အချိန်နှင့်တစ်ပြေးညီ ရွေ့လျားမှုကို လက်ခံရန်
 socket.on('passengerLocationUpdate', (data) => {
-    if (data.lat && data.lng) {
+    var pId = data.passengerId || data.id;
+    var pLat = data.lat;
+    var pLng = data.lng;
+
+    if (pId && pLat && pLng) {
         if (typeof passengersMarkers !== 'undefined') {
             if (!passengersMarkers) {
                 passengersMarkers = {};
             }
-            if (passengersMarkers[data.passengerId]) {
-                passengersMarkers[data.passengerId].setLatLng([data.lat, data.lng]);
+            if (passengersMarkers[pId]) {
+                passengersMarkers[pId].setLatLng([pLat, pLng]);
             } else {
-                passengersMarkers[data.passengerId] = L.marker([data.lat, data.lng], {
+                passengersMarkers[pId] = L.marker([pLat, pLng], {
                     icon: L.icon({
                         iconUrl: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
                         iconSize: [32, 32]
@@ -226,7 +232,20 @@ socket.on('passengerLocationUpdate', (data) => {
         }
         
         if (typeof passengerMarker !== 'undefined' && passengerMarker) {
-            passengerMarker.setLatLng([data.lat, data.lng]);
+            passengerMarker.setLatLng([pLat, pLng]);
+        }
+
+        // ယာဉ်မောင်းလက်ခံထားသော activePassengerId ဖြစ်ပါက ယာဉ်မောင်းနှင့် လမ်းကြောင်းပြမျဉ်းပါ အပ်ဒိတ်လုပ်ရန်
+        if (typeof activePassengerId !== 'undefined' && activePassengerId === pId) {
+            targetLat = pLat;
+            targetLng = pLng;
+            if (typeof driverLat !== 'undefined' && driverLat && driverLng && typeof routingControl !== 'undefined' && routingControl) {
+                let waypoints = [L.latLng(driverLat, driverLng), L.latLng(targetLat, targetLng)];
+                if (typeof destLat !== 'undefined' && destLat && destLng) {
+                    waypoints.push(L.latLng(destLat, destLng));
+                }
+                routingControl.setWaypoints(waypoints);
+            }
         }
     }
 });
