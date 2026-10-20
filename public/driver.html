@@ -147,6 +147,36 @@
             }
         }
 
+socket.on('liveLocationUpdate', (data) => {
+    var pId = data.passengerId || data.id;
+    var pLat = data.lat;
+    var pLng = data.lng;
+
+    if (pLat && pLng) {
+        // ခရီးသည် မားကာ အမြဲတမ်း ရွေ့လျားစေရန်
+        if (typeof window.singlePassengerMarker !== 'undefined' && window.singlePassengerMarker) {
+            window.singlePassengerMarker.setLatLng([pLat, pLng]);
+        } else {
+            window.singlePassengerMarker = L.marker([pLat, pLng], {
+                icon: L.icon({
+                    iconUrl: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+                    iconSize: [32, 32]
+                })
+            }).addTo(map).bindPopup('<b>ခရီးသည် တည်နေရာ</b>');
+        }
+
+        // ယာဉ်မောင်းနှင့် ခရီးသည် လမ်းကြောင်းပြမျဉ်း (Routing) ကို အပ်ဒိတ်လုပ်ရန်
+        targetLat = pLat;
+        targetLng = pLng;
+        if (typeof driverLat !== 'undefined' && driverLat && driverLng && typeof routingControl !== 'undefined' && routingControl) {
+            let waypoints = [L.latLng(driverLat, driverLng), L.latLng(targetLat, targetLng)];
+            if (typeof destLat !== 'undefined' && destLat && destLng) {
+                waypoints.push(L.latLng(destLat, destLng));
+            }
+            routingControl.setWaypoints(waypoints);
+        }
+    }
+});
       
           
 
