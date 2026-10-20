@@ -281,27 +281,35 @@ if (!passengersMarkers[pId]) {
         });
     
     socket.on('passengerRequested', (data) => {
-    let passengerPhone = data.passengerPhone || "ဖုန်းနံပါတ်မရှိပါ";
-    let passengerName = data.passengerName || "အမည်မသိ";
-    
-    // UI ပေါ်တွင် ဖုန်းနံပါတ်နှင့် အမည်ပေါ်စေရန်
-    if(document.getElementById('passengerPhoneDisplay')) {
-        document.getElementById('passengerPhoneDisplay').innerText = passengerPhone;
-    }
-    if(document.getElementById('passengerNameDisplay')) {
-        document.getElementById('passengerNameDisplay').innerText = passengerName;
+    // ဖုန်းမြည်သံ ဖွင့်ရန်
+    let ringtoneAudio = document.getElementById('ringtoneAudio');
+    if (ringtoneAudio) {
+        ringtoneAudio.play().catch(e => console.log("Audio play error", e));
     }
 
+    let passengerPhone = data.passengerPhone || "ဖုန်းနံပါတ်မရှိပါ";
+    let passengerName = data.passengerName || "ခရီးသည်";
+
+    // အခြေအနေ စာသားနေရာတွင် ဖုန်းနံပါတ်နှင့် အမည် တန်းပေါ်စေရန်
+    let statusEl = document.getElementById('status');
+    if (statusEl) {
+        statusEl.innerText = `ခရီးသည်: ${passengerName} | ဖုန်း: ${passengerPhone} မှ ကားခေါ်ဆိုထားပါသည်။`;
+    }
+
+    // မားကာ (Marker) ပြသရန်
     if (data.lat && data.lng) {
-        if (passengerMarker) {
+        if (typeof passengerMarker !== 'undefined' && passengerMarker) {
             passengerMarker.setLatLng([data.lat, data.lng]);
+            passengerMarker.bindPopup(`<b>${passengerName}</b><br>ဖုန်း: ${passengerPhone}`).openPopup();
         } else {
             passengerMarker = L.marker([data.lat, data.lng]).addTo(map)
                 .bindPopup(`<b>${passengerName}</b><br>ဖုန်း: ${passengerPhone}`)
                 .openPopup();
         }
+        map.setView([data.lat, data.lng], 15);
     }
 });
+
 
     </script>
 </body>
