@@ -151,7 +151,17 @@ verifyDriverAccess();
 
     if (data.passengerId) {
         acceptSpecificRide(data.passengerId, data.lat, data.lng, data.destLat, data.destLng);
+    }    // ခရီးသည်၏ တည်နေရာ မားကာကို ယာဉ်မောင်းဘက်တွင် ပေါ်လာစေရန်
+    if (data.lat && data.lng) {
+        if (passengerMarker) {
+            passengerMarker.setLatLng([data.lat, data.lng]);
+        } else {
+            passengerMarker = L.marker([data.lat, data.lng]).addTo(map)
+                .bindPopup(`<b>${passengerName}</b><br>ဖုန်း: ${passengerPhone}`)
+                .openPopup();
+        }
     }
+
 });
 let passengerMarker = null;
 
