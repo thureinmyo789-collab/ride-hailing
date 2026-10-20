@@ -316,14 +316,24 @@ socket.on('rideCompleted', () => {
         }
 
         function startSharing() {
-            if (currentLat && currentLng) {
-                isSharing = true;
-                document.getElementById('status').innerText = "အခြေအနေ: တည်နေရာ မျှဝေနေပါပြီ";
-                socket.emit('liveLocationUpdate', { lat: currentLat, lng: currentLng, destLat: destLat, destLng: destLng });
-            } else {
-                alert("တည်နေရာ ရှာမတွေ့သေးပါ။");
-            }
-        }
+    if (currentLat && currentLng) {
+        isSharing = true;
+        document.getElementById('status').innerText = "တည်နေရာ မျှဝေနေပါပြီ...";
+        
+        // တည်နေရာ အပ်ဒိတ်များကို ပို့ရန်
+        socket.emit('liveLocationUpdate', { lat: currentLat, lng: currentLng });
+        
+        socket.emit('passengerLocationUpdate', {
+            passengerId: typeof myPassengerId !== 'undefined' ? myPassengerId : socket.id,
+            lat: currentLat,
+            lng: currentLng,
+            driverPhone: typeof targetDriverPhone !== 'undefined' ? targetDriverPhone : ''
+        });
+    } else {
+        alert("တည်နေရာ ရှာမတွေ့သေးပါ။");
+    }
+}
+
 
         // ယာဉ်မောင်းမှ လက်ခံကြောင်း စာသားပြသခြင်း
         socket.on('rideAccepted', (data) => {
