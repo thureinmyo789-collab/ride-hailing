@@ -64,16 +64,16 @@
         var destLng = null;
 // ၁။ ခရီးသည် ဖုန်းနံပါတ် ရယူခြင်း
 function getPassengerPhone() {
-    let phoneInput = document.getElementById('passengerPhone').value;
-
-    if (!phoneInput) {
-        let savedPhone = localStorage.getItem('passengerPhone');
-        if (savedPhone) return savedPhone;
-        return null;
+    let inputElem = document.getElementById('passengerPhone');
+    if (inputElem && inputElem.value.trim() !== "") {
+        localStorage.setItem('passengerPhone', inputElem.value.trim());
+        return inputElem.value.trim();
     }
-    localStorage.setItem('passengerPhone', phoneInput);
-    return phoneInput;
+    let savedPhone = localStorage.getItem('passengerPhone');
+    if (savedPhone) return savedPhone;
+    return "09893436897"; // အရေးပေါ် ယာယီနံပါတ်
 }
+
 
 // ၂။ ယာဉ်မောင်းအား ခေါ်ယူသည့် Function ပြင်ဆင်ခြင်း
 function selectDriver(driverId) {
