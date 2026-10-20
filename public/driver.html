@@ -100,7 +100,35 @@
             // Ringtone ရပ်တန့်ရန်
             ringtoneAudio.pause();
             ringtoneAudio.currentTime = 0;
-        });
+        });// ခရီးသည်မှ ကားခေါ်လိုက်သောအခါ (သို့မဟုတ် ယာဉ်မောင်းကို ချိတ်ဆက်လိုက်သောအခါ) Data လက်ခံခြင်း
+socket.on('rideAssigned', (data) => {
+    console.log("ခရီးသည် အချက်အလက် ရရှိပါပြီ:", data);
+
+    // ၁။ ခရီးသည် တည်နေရာ (Pickup Location) ကို Map ပေါ်တွင် Marker ပြရန်
+    if (data.pickupLat && data.pickupLng) {
+        let passengerMarker = L.marker([data.pickupLat, data.pickupLng]).addTo(map)
+            .bindPopup(`<b>ခရီးသည်:</b> ${data.passengerName || 'Unknown'}<br><b>ဖုန်း:</b> ${data.passengerPhone || 'N/A'}`)
+            .openPopup();
+            
+        // Map ကို ခရီးသည်နေရာဆီသို့ ရွှေ့ရန်
+        map.setView([data.pickupLat, data.pickupLng], 15);
+    }
+
+    // ၂။ ခရီးသည်သွားမည့်နေရာ (Destination Location) ကို Map ပေါ်တွင် Marker ပြရန်
+    if (data.destLat && data.destLng) {
+        let destMarker = L.marker([data.destLat, data.destLng], {
+            // လိုအပ်ပါက အရောင်ကွဲရန် Icon သုံးနိုင်သည်
+        }).addTo(map)
+          .bindPopup(`<b>သွားမည့်နေရာ (Destination)</b>`);
+    }
+
+    // ၃။ ယာဉ်မောင်းဘက် UI (Driver Dashboard) တွင် ခရီးသည် အချက်အလက်နှင့် ဖုန်းနံပါတ်ပြရန်
+    if(document.getElementById('passenger-phone')) {
+        document.getElementById('passenger-phone').innerText = data.passengerPhone || '';
+        document.getElementById('passenger-name').innerText = data.passengerName || '';
+    }
+});
+
 
         // ယာဉ်မောင်း မားကာ (အနီရောင်)
         var redIcon = L.icon({
