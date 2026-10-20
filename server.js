@@ -96,9 +96,9 @@ const DRIVERS_FILE = path.join(__dirname, 'drivers.json');
 if (!fs.existsSync(DRIVERS_FILE)) {
     const initialDrivers = [
         {
-            name: "ဦးကျော်ကျော်",
-            phone: "09123456789",
-            car: "Toyota Alphard (က-၁၂၃၄)",
+            name: "‌‌ေမာင်သူရိန်မျိုး",
+            phone: "09405005672",
+            car: "Toyota Alphard (SHAN38-7890)",
             image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100"
         },
         {
@@ -208,11 +208,11 @@ io.on('connection', (socket) => {
     });
 
     // ခရီးသည်မှ သီးသန့် ယာဉ်မောင်းထံသို့ ကားခေါ်ဆိုခြင်း (Ringtone အသံမြည်စေရန် Target ဖြင့် ပို့ခြင်း)
-socket.on('passengerRequestedRide', (data) => {
+socket.on('passengerRequestRide', (data) => {
 
     let targetPhone = data.targetDriverPhone || data.driverPhone;
     if (targetPhone && onlineDrivers[targetPhone]) {
-        io.to(onlineDrivers[targetPhone]).emit('passengerRequestedRide', {
+        io.to(onlineDrivers[targetPhone]).emit('passengerRequested', {
             passengerId: socket.id,
             lat: data.lat,
             lng: data.lng,
@@ -223,6 +223,7 @@ socket.on('passengerRequestedRide', (data) => {
         });
     }
 });
+
 
 
            
