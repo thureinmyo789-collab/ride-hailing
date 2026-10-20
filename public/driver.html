@@ -29,6 +29,39 @@
     <script src="/socket.io/socket.io.js"></script>
 
     <script>
+        // Driver Verification စနစ် (register-driver.html တွင် စာရင်းသွင်းထားခြင်း ရှိမရှိ စစ်ဆေးခြင်း)
+        (async function verifyDriverAccess() {
+            let driverPhone = prompt("ယာဉ်မောင်း ဝင်ရောက်ရန် သင်၏ ဖုန်းနံပါတ်ကို ထည့်ပါ:");
+            if (!driverPhone) {
+                alert("ဖုန်းနံပါတ် မထည့်သွင်းထားပါသဖြင့် ဝင်ရောက်ခွင့် မရှိပါ။ Admin ထံတွင် စာရင်းသွင်းပါ။");
+                document.body.innerHTML = "<h2 style='text-align:center; margin-top:50px; color:red;'>Access Denied: ယာဉ်မောင်းစာရင်းသွင်းထားခြင်း မရှိပါ။ Admin ထံတွင် စာရင်းသွင်းပါ။</h2>";
+                throw new Error("Unauthorized driver");
+            }
+
+            try {
+                let response = await fetch('/api/drivers');
+                let drivers = await response.json();
+                let found = drivers.find(d => d.phone === driverPhone.trim());
+
+                if (!found) {
+                    alert("ဤဖုန်းနံပါတ်ဖြင့် ယာဉ်မောင်းစာရင်းသွင်းထားခြင်း မရှိပါ။ Admin ထံတွင် ကိုယ်တိုင် လျှောက်လွှာတင်ပါ။");
+                    document.body.innerHTML = "<h2 style='text-align:center; margin-top:50px; color:red;'>Access Denied: ယာဉ်မောင်းစာရင်း မရှိပါ။ Admin ထံတွင် စာရင်းသွင်းပါ။</h2>";
+                    throw new Error("Driver not registered");
+                } else {
+                    // ဝင်ရောက်ခွင့် အောင်မြင်ပါက ယာဉ်မောင်းအချက်အလက်ကို သိမ်းဆည်းထားနိုင်သည်
+                    localStorage.setItem('driverPhone', found.phone);
+                    localStorage.setItem('driverName', found.name);
+
+                    // အောင်မြင်စွာ ဝင်ရောက်ပြီးပါက ဆာဗာသို့ Online ဖြစ်ကြောင်း Signal ပို့ပေးမည်[span_1](start_span)[span_1](end_span)
+                    var socket = io();
+                    socket.emit('driverOnline', { phone: found.phone });
+                }
+            } catch (err) {
+                console.error("Verification error:", err);
+                throw err;
+            }
+        })();
+
         var map = L.map('map').setView([21.9833, 100.0833], 15);
 
         // Google Hybrid Map (ဂြိုလ်တုပုံရိပ် + လမ်းနှင့် နေရာအမည်များ)
@@ -50,6 +83,24 @@
         var driverLat = null;
         var driverLng = null;
         var driverWatchId = null;
+
+        // ဖုန်း Ringtone အသံဖိုင် သတ်မှတ်ခြင်း (HTML5 Audio API)[span_2](start_span)[span_2](end_span)
+        var ringtoneAudio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+        ringtoneAudio.loop = true;
+
+        // ခရီးသည်မှ သီးသန့်ခေါ်ဆိုလာသည့်အခါ Ringtone အသံမြည်စေရန် လက်ခံခြင်း[span_3](start_span)[span_3](end_span)
+        socket.on('ringtoneAlert', (data) => {
+            ringtoneAudio.play().catch(e => console.log("Audio play blocked by browser:", e));
+            alert(data.passengerName + " မှ သင့်ထံသို့ ကားခေါ်ဆိုထားပါသည်။ အကြောင်းကြားစာကို လက်ခံရန် နှိပ်ပါ။");
+            
+            // ခရီးစဉ်ကို အလိုအလျောက် ပေါ်လာစေရန် သို့မဟုတ် လက်ခံရန် ပြင်ဆင်ခြင်း
+            if (data.passengerId) {
+                acceptSpecificRide(data.passengerId, data.lat, data.lng, data.destLat, data.destLng);
+            }
+            // Ringtone ရပ်တန့်ရန်
+            ringtoneAudio.pause();
+            ringtoneAudio.currentTime = 0;
+        });
 
         // ယာဉ်မောင်း မားကာ (အနီရောင်)
         var redIcon = L.icon({
@@ -175,6 +226,10 @@
             destLng = pDestLng;
             arrivedAlerted = false;
 
+            // အကယ်၍ Ringtone မြည်နေပါက ရပ်တန့်ရန်
+            ringtoneAudio.pause();
+            ringtoneAudio.currentTime = 0;
+
             socket.emit('acceptRide', { passengerId: passengerId, message: 'ယာဉ်မောင်းမှ သင့်ခရီးစဉ်ကို လက်ခံလိုက်ပါပြီ။' });
             document.getElementById('status').innerText = 'ခရီးစဉ် လက်ခံထားပါသည်။';
             document.getElementById('finish-ride-btn').style.display = 'block';
@@ -240,5 +295,3 @@
     </script>
 </body>
 </html>
-
-
