@@ -64,7 +64,8 @@
         var destLng = null;
 // ၁။ ခရီးသည် ဖုန်းနံပါတ် ရယူခြင်း
 function getPassengerPhone() {
-    let phoneInput = document.getElementById('passenger-phone').value.trim();
+    let phoneInput = document.getElementById('passengerPhone').value;
+
     if (!phoneInput) {
         let savedPhone = localStorage.getItem('passengerPhone');
         if (savedPhone) return savedPhone;
