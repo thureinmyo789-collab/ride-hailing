@@ -220,8 +220,10 @@ socket.on('passengerLocationUpdate', (data) => {
                 passengersMarkers = {};
             }
             if (passengersMarkers[pId]) {
+                // မားကာရှိပြီးသားဆိုလျှင် တည်နေရာကိုသာ အပ်ဒိတ်လုပ်ရန်
                 passengersMarkers[pId].setLatLng([pLat, pLng]);
             } else {
+                // မားကာအသစ် ဆောက်ရန်
                 passengersMarkers[pId] = L.marker([pLat, pLng], {
                     icon: L.icon({
                         iconUrl: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
@@ -231,11 +233,21 @@ socket.on('passengerLocationUpdate', (data) => {
             }
         }
         
+        // သီးသန့် passengerMarker သုံးထားလျှင်
         if (typeof passengerMarker !== 'undefined' && passengerMarker) {
             passengerMarker.setLatLng([pLat, pLng]);
+        } else if (typeof map !== 'undefined' && !window.singlePassengerMarker) {
+            window.singlePassengerMarker = L.marker([pLat, pLng], {
+                icon: L.icon({
+                    iconUrl: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+                    iconSize: [32, 32]
+                })
+            }).addTo(map).bindPopup('<b>ခရီးသည် တည်နေရာ</b>');
+        } else if (window.singlePassengerMarker) {
+            window.singlePassengerMarker.setLatLng([pLat, pLng]);
         }
 
-        // ယာဉ်မောင်းလက်ခံထားသော activePassengerId ဖြစ်ပါက ယာဉ်မောင်းနှင့် လမ်းကြောင်းပြမျဉ်းပါ အပ်ဒိတ်လုပ်ရန်
+        // လမ်းကြောင်းပြမျဉ်း (Routing) ကိုပါ လိုက်ပါ အပ်ဒိတ်လုပ်ရန်
         if (typeof activePassengerId !== 'undefined' && activePassengerId === pId) {
             targetLat = pLat;
             targetLng = pLng;
@@ -249,6 +261,8 @@ socket.on('passengerLocationUpdate', (data) => {
         }
     }
 });
+
+          
 
 
         window.acceptSpecificRide = function(passengerId, pLat, pLng, pDestLat, pDestLng) {
