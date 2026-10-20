@@ -195,21 +195,7 @@ io.on('connection', (socket) => {
         res.json(onlineDrivers);
     });
 
-    socket.on('liveLocationUpdate', (data) => {
-        passengersLocations[socket.id] = { 
-            id: socket.id, 
-            lat: data.lat, 
-            lng: data.lng,
-            destLat: data.destLat,
-            destLng: data.destLng,
-            driverPhone: data.driverPhone
-        };
-       // io.emit('liveLocationUpdate', passengersLocations[socket.id]);
-    });
-
-    // ခရီးသည်မှ သီးသန့် ယာဉ်မောင်းထံသို့ ကားခေါ်ဆိုခြင်း (Ringtone အသံမြည်စေရန် Target ဖြင့် ပို့ခြင်း)
-socket.on('passengerRequestRide', (data) => {
-
+    socket.on('passengerRequestRide', (data) => {
     let targetPhone = data.targetDriverPhone || data.driverPhone;
     if (targetPhone && onlineDrivers[targetPhone]) {
         io.to(onlineDrivers[targetPhone]).emit('passengerRequested', {
@@ -218,12 +204,11 @@ socket.on('passengerRequestRide', (data) => {
             lng: data.lng,
             destLat: data.destLat,
             destLng: data.destLng,
-            passengerName: data.passengerName || "ခရီးသည်",
+            passengerName: data.passengerName || "အမည်မသိ",
             passengerPhone: data.passengerPhone
         });
-    }
+     }
 });
-
 
 
            
