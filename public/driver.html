@@ -290,25 +290,40 @@ if (!passengersMarkers[pId]) {
     let passengerPhone = data.passengerPhone || "ဖုန်းနံပါတ်မရှိပါ";
     let passengerName = data.passengerName || "ခရီးသည်";
 
-    // အခြေအနေ စာသားနေရာတွင် ဖုန်းနံပါတ်နှင့် အမည် တန်းပေါ်စေရန်
+    // Status တွင် ဖော်ပြရန်
     let statusEl = document.getElementById('status');
     if (statusEl) {
-        statusEl.innerText = `ခရီးသည်: ${passengerName} | ဖုန်း: ${passengerPhone} မှ ကားခေါ်ဆိုထားပါသည်။`;
+        statusEl.innerText = `${passengerName} (${passengerPhone}) မှ ကားခေါ်ဆိုထားပါသည်။`;
     }
 
-    // မားကာ (Marker) ပြသရန်
+    // ခရီးသည် တည်နေရာ မားကာ (Passenger Marker) ပြသခြင်းနှင့် ခရီးစဉ်လက်ခံရန် ခလုတ်ထည့်သွင်းခြင်း
     if (data.lat && data.lng) {
         if (typeof passengerMarker !== 'undefined' && passengerMarker) {
             passengerMarker.setLatLng([data.lat, data.lng]);
-            passengerMarker.bindPopup(`<b>${passengerName}</b><br>ဖုန်း: ${passengerPhone}`).openPopup();
+            passengerMarker.bindPopup(`<b>${passengerName}</b><br>ဖုန်း: ${passengerPhone}<br><button onclick="acceptSpecificRide('${data.passengerId || ''}', ${data.lat}, ${data.lng}, ${data.destLat || 0}, ${data.destLng || 0})" style="background:#28a745;color:white;padding:5px 10px;border:none;border-radius:4px;cursor:pointer;margin-top:5px;">ဤခရီးစဉ်ကို လက်ခံမည်</button>`).openPopup();
         } else {
             passengerMarker = L.marker([data.lat, data.lng]).addTo(map)
-                .bindPopup(`<b>${passengerName}</b><br>ဖုန်း: ${passengerPhone}`)
+                .bindPopup(`<b>${passengerName}</b><br>ဖုန်း: ${passengerPhone}<br><button onclick="acceptSpecificRide('${data.passengerId || ''}', ${data.lat}, ${data.lng}, ${data.destLat || 0}, ${data.destLng || 0})" style="background:#28a745;color:white;padding:5px 10px;border:none;border-radius:4px;cursor:pointer;margin-top:5px;">ဤခရီးစဉ်ကို လက်ခံမည်</button>`)
                 .openPopup();
         }
-        map.setView([data.lat, data.lng], 15);
+    }
+
+    // သွားမည့်နေရာ မားကာ (Destination Marker) ပြသခြင်း
+    if (data.destLat && data.destLng) {
+        if (typeof destinationMarker !== 'undefined' && destinationMarker) {
+            destinationMarker.setLatLng([data.destLat, data.destLng]);
+        } else {
+            destinationMarker = L.marker([data.destLat, data.destLng], {
+                icon: L.icon({
+                    iconUrl: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',
+                    iconSize: [32, 32]
+                })
+            }).addTo(map).bindPopup('<b>သွားမည့်နေရာ (Destination)</b>');
+        }
     }
 });
+
+  
 
 
     </script>
