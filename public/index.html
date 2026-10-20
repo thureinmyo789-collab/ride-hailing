@@ -366,7 +366,18 @@ socket.on('rideCompleted', () => {
                 driverMarker = null;
             }
             document.getElementById('status').innerText = "ခရီးစဉ် ပြီးဆုံးသွားပါပြီ။";
+socket.emit('selectDriver', {
+    driverSocketId: selectedDriverSocketId, // ရွေးချယ်လိုက်သော ယာဉ်မောင်း၏ Socket ID
+    passengerLat: currentLat,               // ခရီးသည် လက်ရှိ Lat
+    passengerLng: currentLng,               // ခရီးသည် လက်ရှိ Lng
+    destLat: destinationLat,                // သွားမည့်နေရာ Lat
+    destLng: destinationLng,                // သွားမည့်နေရာ Lng
+    passengerName: "ခရီးသည်အမည်",
+    passengerPhone: "ခရီးသည်ဖုန်းနံပါတ်"
+});
         });
+
+
     </script>
 </body>
 </html>
