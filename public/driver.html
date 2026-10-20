@@ -280,7 +280,8 @@ if (!passengersMarkers[pId]) {
             }
         });
     
-    socket.on('passengerRequestedRide', (data) => {
+    socket.on('passengerRequested', (data) => {
+
     let ringtoneAudio = document.getElementById('ringtoneAudio');
     if (ringtoneAudio) {
         ringtoneAudio.play().catch(e => console.log("Audio play error:", e));
