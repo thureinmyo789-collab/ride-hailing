@@ -204,7 +204,7 @@ io.on('connection', (socket) => {
             destLng: data.destLng,
             driverPhone: data.driverPhone
         };
-        io.emit('liveLocationUpdate', passengersLocations[socket.id]);
+       // io.emit('liveLocationUpdate', passengersLocations[socket.id]);
     });
 
     // ခရီးသည်မှ သီးသန့် ယာဉ်မောင်းထံသို့ ကားခေါ်ဆိုခြင်း (Ringtone အသံမြည်စေရန် Target ဖြင့် ပို့ခြင်း)
