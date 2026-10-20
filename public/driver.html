@@ -281,26 +281,27 @@ if (!passengersMarkers[pId]) {
         });
     
     socket.on('passengerRequested', (data) => {
-
-    let ringtoneAudio = document.getElementById('ringtoneAudio');
-    if (ringtoneAudio) {
-        ringtoneAudio.play().catch(e => console.log("Audio play error:", e));
+    let passengerPhone = data.passengerPhone || "ဖုန်းနံပါတ်မရှိပါ";
+    let passengerName = data.passengerName || "အမည်မသိ";
+    
+    // UI ပေါ်တွင် ဖုန်းနံပါတ်နှင့် အမည်ပေါ်စေရန်
+    if(document.getElementById('passengerPhoneDisplay')) {
+        document.getElementById('passengerPhoneDisplay').innerText = passengerPhone;
+    }
+    if(document.getElementById('passengerNameDisplay')) {
+        document.getElementById('passengerNameDisplay').innerText = passengerName;
     }
 
-    let pName = data.passengerName || "ခရီးသည်";
-    let pPhone = data.passengerPhone || "ဖုန်းနံပါတ်မရှိပါ";
-
-    // အချက်အလက်များကို status စာသားနေရာတွင် ဖော်ပြခြင်း
-    let statusEl = document.getElementById('status');
-    if (statusEl) {
-        statusEl.innerText = pName + " (" + pPhone + ") မှ ကားခေါ်ဆိုထားပါသည်။";
-    }
-
-    if (data.passengerId) {
-        acceptSpecificRide(data.passengerId, data.lat, data.lng, data.destLat, data.destLng);
+    if (data.lat && data.lng) {
+        if (passengerMarker) {
+            passengerMarker.setLatLng([data.lat, data.lng]);
+        } else {
+            passengerMarker = L.marker([data.lat, data.lng]).addTo(map)
+                .bindPopup(`<b>${passengerName}</b><br>ဖုန်း: ${passengerPhone}`)
+                .openPopup();
+        }
     }
 });
-
 
     </script>
 </body>
