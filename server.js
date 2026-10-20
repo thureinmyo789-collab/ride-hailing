@@ -210,6 +210,19 @@ io.on('connection', (socket) => {
      }
 });
 
+// ခရီးသည်မှ ယာဉ်မောင်းကို ရွေးချယ်လိုက်သောအခါ
+socket.on('selectDriver', (data) => {
+    if (data.driverSocketId) {
+        io.to(data.driverSocketId).emit('rideAssigned', {
+            pickupLat: data.passengerLat,
+            pickupLng: data.passengerLng,
+            destLat: data.destLat,
+            destLng: data.destLng,
+            passengerName: data.passengerName,
+            passengerPhone: data.passengerPhone
+        });
+    }
+});
 
            
 
