@@ -195,20 +195,44 @@ io.on('connection', (socket) => {
         res.json(onlineDrivers);
     });
 
-    // ခရီးသည်မှ ယာဉ်မောင်းထံသို့ တိုက်ရိုက်ခေါ်ဆိုခြင်း
+        // ခရီးသည်မှ ယာဉ်မောင်းထံသို့ တိုက်ရိုက်ခေါ်ဆိုခြင်း
     socket.on('passengerRequestRide', (data) => {
         let targetPhone = data.targetDriverPhone || data.driverPhone;
         if (targetPhone && onlineDrivers[targetPhone]) {
-            // driver.html တွင် 'passengerRequestRide' သို့မဟုတ် 'ringtoneAlert' ဖြင့် တိုက်ရိုက်ဖမ်းနိုင်ရန် ပို့ပေးခြင်း
+            // driver.html ဘက်မှ လက်ခံမည့် 'passengerRequestRide' နှင့် 'rideAssigned' နှစ်ခုစလုံးကို တပြိုင်နက် ပို့ပေးခြင်း
             io.to(onlineDrivers[targetPhone]).emit('passengerRequestRide', {
                 passengerId: socket.id,
                 lat: data.lat,
                 lng: data.lng,
                 destLat: data.destLat,
                 destLng: data.destLng,
-                passengerName: data.passengerName || "အမည်မသိ",
-                passengerPhone: data.passengerPhone
+                passengerName: data.passengerName || "ခရီးသည်",
+                passengerPhone: data.passengerPhone || "N/A"
             });
+
+            io.to(onlineDrivers[targetPhone]).emit('rideAssigned', {
+                passengerId: socket.id,
+                pickupLat: data.lat,
+                pickupLng: data.lng,
+                destLat: data.destLat,
+                destLng: data.destLng,
+                passengerName: data.passengerName || "ခရီးသည်",
+                passengerPhone: data.passengerPhone || "N/A"
+            });
+            
+            // ယာဉ်မောင်းဘက်က ringtone မြည်စေရန်
+            io.to(onlineDrivers[targetPhone]).emit('ringtoneAlert', {
+                passengerId: socket.id,
+                lat: data.lat,
+                lng: data.lng,
+                destLat: data.destLat,
+                destLng: data.destLng,
+                passengerName: data.passengerName || "ခရီးသည်",
+                passengerPhone: data.passengerPhone || "N/A"
+            });
+        }
+    });
+
             
             // ယာဉ်မောင်းဘက်က ringtone မြည်စေရန်ပါ ထပ်ဆင့်ပို့ပေးခြင်း
             io.to(onlineDrivers[targetPhone]).emit('ringtoneAlert', {
