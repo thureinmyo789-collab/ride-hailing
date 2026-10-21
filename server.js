@@ -16,7 +16,7 @@ app.post('/api/register-driver', (req, res) => {
     if (!phone) {
         return res.status(400).json({ success: false, message: "ဖုန်းနံပါတ် လိုအပ်ပါသည်။" });
     }
-    
+
     // 6-digit passcode သို့မဟုတ် Admin သတ်မှတ်ပေးသည့် passcode
     const code = passcode || Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -52,7 +52,7 @@ app.post('/api/register-driver', (req, res) => {
 
 app.post('/api/driver-login', (req, res) => {
     const { phone, passcode } = req.body;
-    
+
     let drivers = [];
     if (fs.existsSync(DRIVERS_FILE)) {
         try {
@@ -195,44 +195,61 @@ io.on('connection', (socket) => {
         res.json(onlineDrivers);
     });
 
+    // ခရီးသည်မှ ယာဉ်မောင်းထံသို့ တိုက်ရိုက်ခေါ်ဆိုခြင်း
     socket.on('passengerRequestRide', (data) => {
-    let targetPhone = data.targetDriverPhone || data.driverPhone;
-    if (targetPhone && onlineDrivers[targetPhone]) {
-        io.to(onlineDrivers[targetPhone]).emit('passengerRequested', {
-            passengerId: socket.id,
-            lat: data.lat,
-            lng: data.lng,
-            destLat: data.destLat,
-            destLng: data.destLng,
-            passengerName: data.passengerName || "အမည်မသိ",
-            passengerPhone: data.passengerPhone
-        });
-     }
-});
-
-// ခရီးသည်မှ ယာဉ်မောင်းကို ရွေးချယ်လိုက်သောအခါ
-socket.on('selectDriver', (data) => {
-    if (data.driverSocketId) {
-        io.to(data.driverSocketId).emit('rideAssigned', {
-            pickupLat: data.passengerLat,
-            pickupLng: data.passengerLng,
-            destLat: data.destLat,
-            destLng: data.destLng,
-            passengerName: data.passengerName,
-            passengerPhone: data.passengerPhone
-        });
-    }
-});
-
-           
-
-    socket.on('acceptRide', (data) => {
-        io.to(data.passengerId).emit('rideAccepted', {
-            message: data.message,
-            driverId: socket.id
-        });
+        let targetPhone = data.targetDriverPhone || data.driverPhone;
+        if (targetPhone && onlineDrivers[targetPhone]) {
+            // driver.html တွင် 'passengerRequestRide' သို့မဟုတ် 'ringtoneAlert' ဖြင့် တိုက်ရိုက်ဖမ်းနိုင်ရန် ပို့ပေးခြင်း
+            io.to(onlineDrivers[targetPhone]).emit('passengerRequestRide', {
+                passengerId: socket.id,
+                lat: data.lat,
+                lng: data.lng,
+                destLat: data.destLat,
+                destLng: data.destLng,
+                passengerName: data.passengerName || "အမည်မသိ",
+                passengerPhone: data.passengerPhone
+            });
+            
+            // ယာဉ်မောင်းဘက်က ringtone မြည်စေရန်ပါ ထပ်ဆင့်ပို့ပေးခြင်း
+            io.to(onlineDrivers[targetPhone]).emit('ringtoneAlert', {
+                passengerId: socket.id,
+                lat: data.lat,
+                lng: data.lng,
+                destLat: data.destLat,
+                destLng: data.destLng,
+                passengerName: data.passengerName || "အမည်မသိ",
+                passengerPhone: data.passengerPhone
+            });
+        }
     });
 
+    // ခရီးသည်မှ ယာဉ်မောင်းကို ရွေးချယ်လိုက်သောအခါ
+    socket.on('selectDriver', (data) => {
+        if (data.driverSocketId) {
+            io.to(data.driverSocketId).emit('rideAssigned', {
+                pickupLat: data.passengerLat,
+                pickupLng: data.passengerLng,
+                destLat: data.destLat,
+                destLng: data.destLng,
+                passengerName: data.passengerName,
+                passengerPhone: data.passengerPhone
+            });
+        }
+    });
+
+    // ယာဉ်မောင်းမှ ခရီးစဉ်ကို လက်ခံလိုက်သောအခါ (Accept Ride)
+    socket.on('acceptRide', (data) => {
+        if (data.passengerId) {
+            io.to(data.passengerId).emit('rideAccepted', {
+                message: data.message || 'ယာဉ်မောင်းမှ သင့်ခရီးစဉ်ကို လက်ခံလိုက်ပါပြီ။',
+                driverId: socket.id,
+                driverLat: data.driverLat,
+                driverLng: data.driverLng
+            });
+        }
+    });
+
+    // ယာဉ်မောင်း၏ တည်နေရာကို ခရီးသည်ဘက်သို့ ပို့ပေးခြင်း
     socket.on('driverLocationUpdate', (data) => {
         if (data.passengerId) {
             io.to(data.passengerId).emit('driverLocationUpdate', {
@@ -242,21 +259,24 @@ socket.on('selectDriver', (data) => {
         }
     });
 
+    // ယာဉ်မောင်း ရောက်ရှိကြောင်း အသိပေးခြင်း
     socket.on('driverArrived', (data) => {
         if (data.passengerId) {
             io.to(data.passengerId).emit('driverArrived', data);
         }
     });
 
+    // ခရီးစဉ် ပြီးဆုံးကြောင်း နှိပ်ခြင်း
     socket.on('finishRide', (data) => {
         if (data.passengerId) {
             io.to(data.passengerId).emit('rideFinished', data);
+            io.to(data.passengerId).emit('rideCompleted', data);
         }
     });
 
     socket.on('disconnect', () => {
         console.log('User disconnected: ' + socket.id);
-        
+
         // ယာဉ်မောင်း disconnect ဖြစ်သွားပါက Offline အဖြစ်သို့ ပြောင်းလဲခြင်း
         if (socket.driverPhone) {
             delete onlineDrivers[socket.driverPhone];
