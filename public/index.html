@@ -285,31 +285,33 @@ socket.on('rideCompleted', () => {
         // မျက်နှာပြင် စတင်ဖွင့်ချိန်တွင် ယာဉ်မောင်းစာရင်းကို ဝင်ဆွဲရန်
         fetchDrivers();
 
-        function selectDriver(phone, name, car, isOnline) {
+                function selectDriver(phone, name, car, isOnline) {
             if (!isOnline) {
-                alert(name + " သည် လက်စလက်ထက် အင်တာနက်ဖွင့်ပြီး driver.html ထဲတွင် မရှိသေးပါ (Offline ဖြစ်နေပါသည်)။ ၎င်းအား ခေါ်ဆို၍ မရပါ။");
+                alert(name + " သည် Offline ဖြစ်နေပါသည် မခေါ်ဆိုနိုင်ပါ။");
                 return;
             }
+            let pPhone = getPassengerPhone();
             if (!currentLat || !currentLng) {
-                alert("သင့်လက်ရှိ တည်နေရာ မရသေးပါ။ ခဏစောင့်ပါ။");
+                alert("သင့်လက်ရှိ တည်နေရာ မရသေးပါ။");
                 return;
             }
             isSharing = true;
             document.getElementById('status').innerText = "အခြေအနေ: တည်နေရာ မျှဝေနေပါပြီ (" + name + " ကို ခေါ်ဆိုနေသည်)";
-            
-            // သီးသန့်ယာဉ်မောင်းထံသို့ ringtone အသံမြည်စေရန် targetDriverPhone ဖြင့် ပို့ဆောင်ခြင်း[span_4](start_span)[span_4](end_span)
-        socket.emit('passengerRequestRide', {
-    lat: currentLat,
-    lng: currentLng,
-    destLat: destLat,
-    destLng: destLng,
-    passengerPhone: document.getElementById('passengerPhone').value,
-    passengerName: "အမည်မသိ",
-    targetDriverPhone: phone,
-    driverPhone: phone,
-    driverName: name,
-    carInfo: car
-});
+
+            socket.emit('passengerRequestRide', {
+                lat: currentLat,
+                lng: currentLng,
+                destLat: destLat,
+                destLng: destLng,
+                passengerPhone: pPhone,
+                passengerName: "ခရီးသည်",
+                targetDriverPhone: phone,
+                driverPhone: phone
+            });
+
+            alert(name + " ထံသို့ ကားခေါ်ဆိုမှု ပို့လိုက်ပါပြီ။");
+        }
+
 
 
             alert(name + " ထံသို့ ကားခေါ်ဆိုမှု ပို့လိုက်ပါပြီ။ ဖုန်း Ringtone အသံမြည်လာပါလိမ့်မည်။");
