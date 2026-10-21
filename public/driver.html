@@ -20,6 +20,9 @@
     <div class="info-box">
         <h3>Driver Dashboard</h3>
         <p id="status">ခရီးသည်များကို စောင့်ဆိုင်းနေသည်...</p>
+        <!-- ခရီးသည် အချက်အလက်ပြရန် UI ဖြည့်စွက်ချက် -->
+        <p style="margin: 5px 0 0 0; font-size: 13px;">ဖုန်း: <span id="passenger-phone" style="font-weight: bold; color: #333;">-</span></p>
+        <p style="margin: 2px 0 5px 0; font-size: 13px;">အမည်: <span id="passenger-name" style="font-weight: bold; color: #333;">-</span></p>
         <button id="finish-ride-btn" class="finish-btn" onclick="finishRide()">ခရီးစဉ် ပြီးဆုံးပြီ (Finish)</button>
     </div>
     <div id="map"></div>
@@ -52,7 +55,7 @@
                     localStorage.setItem('driverPhone', found.phone);
                     localStorage.setItem('driverName', found.name);
 
-                    // အောင်မြင်စွာ ဝင်ရောက်ပြီးပါက ဆာဗာသို့ Online ဖြစ်ကြောင်း Signal ပို့ပေးမည်[span_1](start_span)[span_1](end_span)
+                    // အောင်မြင်စွာ ဝင်ရောက်ပြီးပါက ဆာဗာသို့ Online ဖြစ်ကြောင်း Signal ပို့ပေးမည်
                     var socket = io();
                     socket.emit('driverOnline', { phone: found.phone });
                 }
@@ -84,51 +87,100 @@
         var driverLng = null;
         var driverWatchId = null;
 
-        // ဖုန်း Ringtone အသံဖိုင် သတ်မှတ်ခြင်း (HTML5 Audio API)[span_2](start_span)[span_2](end_span)
+        // ဖုန်း Ringtone အသံဖိုင် သတ်မှတ်ခြင်း (HTML5 Audio API)
         var ringtoneAudio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
         ringtoneAudio.loop = true;
 
-        // ခရီးသည်မှ သီးသန့်ခေါ်ဆိုလာသည့်အခါ Ringtone အသံမြည်စေရန် လက်ခံခြင်း[span_3](start_span)[span_3](end_span)
+        // ==========================================
+        // 🛠️ index.html နှင့် ချိတ်ဆက်ရန် လိုအပ်သော Socket Listeners များ အပြည့်အစုံ ဖြည့်စွက်ခြင်း
+        // ==========================================
+
+        // ၁။ index.html ဘက်မှ 'passengerRequestRide' ဖြင့် လှမ်းခေါ်လာသောအခါ ringtoneAlert သို့ တိုက်ရိုက်ချိတ်ဆက်ပေးရန်
+        socket.on('passengerRequestRide', (data) => {
+            console.log("ခရီးသည်မှ ခေါ်ဆိုမှု ရရှိပါပြီ:", data);
+            
+            // ringtone မြည်စေရန်
+            ringtoneAudio.play().catch(e => console.log("Audio play blocked by browser:", e));
+            alert((data.passengerName || 'ခရီးသည်') + " မှ သင့်ထံသို့ ကားခေါ်ဆိုထားပါသည်။ အကြောင်းကြားစာကို လက်ခံရန် နှိပ်ပါ။");
+
+            // UI တွင် ဖုန်းနံပါတ်နှင့် အမည်ပြသရန်
+            if(document.getElementById('passenger-phone')) {
+                document.getElementById('passenger-phone').innerText = data.passengerPhone || 'N/A';
+                document.getElementById('passenger-name').innerText = data.passengerName || 'ခရီးသည်';
+            }
+
+            // ခရီးသည် တည်နေရာကို Map ပေါ်တွင် Marker ပြသခြင်းနှင့် လမ်းကြောင်းအတွက် သိမ်းဆည်းခြင်း
+            if (data.lat && data.lng) {
+                var pId = data.passengerId || socket.id; // socket id သို့မဟုတ် ခရီးသည် id
+                targetLat = data.lat;
+                targetLng = data.lng;
+                destLat = data.destLat || null;
+                destLng = data.destLng || null;
+
+                if (!passengersMarkers[pId]) {
+                    var marker = L.marker([targetLat, targetLng]).addTo(map)
+                        .bindPopup(`<b>ခရီးသည်:</b> ${data.passengerName || 'Unknown'}<br><b>ဖုန်း:</b> ${data.passengerPhone || 'N/A'}`)
+                        .openPopup();
+                    passengersMarkers[pId] = marker;
+                }
+                map.setView([targetLat, targetLng], 15);
+            }
+
+            // ခရီးသည်သွားမည့်နေရာ (Destination) ရှိပါက မားကာပြရန်
+            if (data.destLat && data.destLng) {
+                if (!destinationMarkers[data.passengerId || 'dest']) {
+                    var destMarker = L.marker([data.destLat, data.destLng], {
+                        icon: L.icon({
+                            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+                            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+                            iconSize: [25, 41],
+                            iconAnchor: [12, 41],
+                            popupAnchor: [1, -34],
+                            shadowSize: [41, 41]
+                        })
+                    }).addTo(map).bindPopup("<b>ခရီးသည် သွားမည့်နေရာ (Destination)</b>");
+                    destinationMarkers[data.passengerId || 'dest'] = destMarker;
+                }
+            }
+
+            // အလိုအလျောက် သို့မဟုတ် လက်ခံရန် ပြင်ဆင်ခြင်း
+            if (data.passengerId) {
+                // အကယ်၍ အလိုအလျောက် လက်ခံချင်ပါက acceptSpecificRide ကို ခေါ်နိုင်သည်၊ သို့မဟုတ် ringtone ဖြင့် စောင့်ဆိုင်းစေနိုင်သည်
+            }
+        });
+
+        // ၂။ index.html တွင် index.html ဖက်က 'rideAccepted' သို့မဟုတ် 'rideAssigned' ကို စောင့်နေသဖြင့် နှစ်ခုစလုံးကို တုံ့ပြန်နိုင်ရန်
+        socket.on('rideAssigned', (data) => {
+            console.log("ခရီးသည် အချက်အလက် ရရှိပါပြီ:", data);
+            if (data.pickupLat && data.pickupLng) {
+                let passengerMarker = L.marker([data.pickupLat, data.pickupLng]).addTo(map)
+                    .bindPopup(`<b>ခရီးသည်:</b> ${data.passengerName || 'Unknown'}<br><b>ဖုန်း:</b> ${data.passengerPhone || 'N/A'}`)
+                    .openPopup();
+                map.setView([data.pickupLat, data.pickupLng], 15);
+            }
+            if (data.destLat && data.destLng) {
+                let destMarker = L.marker([data.destLat, data.destLng]).addTo(map)
+                  .bindPopup(`<b>သွားမည့်နေရာ (Destination)</b>`);
+            }
+            if(document.getElementById('passenger-phone')) {
+                document.getElementById('passenger-phone').innerText = data.passengerPhone || '';
+                document.getElementById('passenger-name').innerText = data.passengerName || '';
+            }
+        });
+
+        // ==========================================
+
+        // ခရီးသည်မှ သီးသန့်ခေါ်ဆိုလာသည့်အခါ Ringtone အသံမြည်စေရန် လက်ခံခြင်း
         socket.on('ringtoneAlert', (data) => {
             ringtoneAudio.play().catch(e => console.log("Audio play blocked by browser:", e));
             alert(data.passengerName + " မှ သင့်ထံသို့ ကားခေါ်ဆိုထားပါသည်။ အကြောင်းကြားစာကို လက်ခံရန် နှိပ်ပါ။");
-            
-            // ခရီးစဉ်ကို အလိုအလျောက် ပေါ်လာစေရန် သို့မဟုတ် လက်ခံရန် ပြင်ဆင်ခြင်း
+
             if (data.passengerId) {
                 acceptSpecificRide(data.passengerId, data.lat, data.lng, data.destLat, data.destLng);
             }
-            // Ringtone ရပ်တန့်ရန်
             ringtoneAudio.pause();
             ringtoneAudio.currentTime = 0;
-        });// ခရီးသည်မှ ကားခေါ်လိုက်သောအခါ (သို့မဟုတ် ယာဉ်မောင်းကို ချိတ်ဆက်လိုက်သောအခါ) Data လက်ခံခြင်း
-socket.on('rideAssigned', (data) => {
-    console.log("ခရီးသည် အချက်အလက် ရရှိပါပြီ:", data);
-
-    // ၁။ ခရီးသည် တည်နေရာ (Pickup Location) ကို Map ပေါ်တွင် Marker ပြရန်
-    if (data.pickupLat && data.pickupLng) {
-        let passengerMarker = L.marker([data.pickupLat, data.pickupLng]).addTo(map)
-            .bindPopup(`<b>ခရီးသည်:</b> ${data.passengerName || 'Unknown'}<br><b>ဖုန်း:</b> ${data.passengerPhone || 'N/A'}`)
-            .openPopup();
-            
-        // Map ကို ခရီးသည်နေရာဆီသို့ ရွှေ့ရန်
-        map.setView([data.pickupLat, data.pickupLng], 15);
-    }
-
-    // ၂။ ခရီးသည်သွားမည့်နေရာ (Destination Location) ကို Map ပေါ်တွင် Marker ပြရန်
-    if (data.destLat && data.destLng) {
-        let destMarker = L.marker([data.destLat, data.destLng], {
-            // လိုအပ်ပါက အရောင်ကွဲရန် Icon သုံးနိုင်သည်
-        }).addTo(map)
-          .bindPopup(`<b>သွားမည့်နေရာ (Destination)</b>`);
-    }
-
-    // ၃။ ယာဉ်မောင်းဘက် UI (Driver Dashboard) တွင် ခရီးသည် အချက်အလက်နှင့် ဖုန်းနံပါတ်ပြရန်
-    if(document.getElementById('passenger-phone')) {
-        document.getElementById('passenger-phone').innerText = data.passengerPhone || '';
-        document.getElementById('passenger-name').innerText = data.passengerName || '';
-    }
-});
-
+        });
 
         // ယာဉ်မောင်း မားကာ (အနီရောင်)
         var redIcon = L.icon({
@@ -145,7 +197,7 @@ socket.on('rideAssigned', (data) => {
             driverWatchId = navigator.geolocation.watchPosition((position) => {
                 driverLat = position.coords.latitude;
                 driverLng = position.coords.longitude;
-                
+
                 if (!driverMarker) {
                     driverMarker = L.marker([driverLat, driverLng], { icon: redIcon })
                         .addTo(map)
@@ -161,8 +213,10 @@ socket.on('rideAssigned', (data) => {
                 if (activePassengerId && targetLat && targetLng) {
                     socket.emit('driverLocationUpdate', { lat: driverLat, lng: driverLng, passengerId: activePassengerId });
 
+                    // index.html ဘက်မှ မျှော်လင့်နေသော driverLocationUpdate ပုံစံအတွက်ပါ ထပ်ဆင့်ပို့ပေးခြင်း
+                    socket.emit('driverLocationUpdate', { lat: driverLat, lng: driverLng });
+
                     if (routingControl) {
-                        // လက်ခံထားလျှင် ယာဉ်မောင်း -> ခရီးသည် -> သွားမည့်နေရာ (Destination) သို့ လမ်းကြောင်းဆွဲပေးမည်
                         let waypoints = [L.latLng(driverLat, driverLng), L.latLng(targetLat, targetLng)];
                         if (destLat && destLng) {
                             waypoints.push(L.latLng(destLat, destLng));
@@ -192,21 +246,20 @@ socket.on('rideAssigned', (data) => {
         }
 
         socket.on('liveLocationUpdate', (data) => {
-            var pId = data.id;
+            var pId = data.id || data.passengerId;
             var pLat = data.lat;
             var pLng = data.lng;
             var pDestLat = data.destLat;
             var pDestLng = data.destLng;
 
-            // အကယ်၍ ဤခရီးသည်နှင့် လက်ရှိ ချိတ်ဆက်(လက်ခံ)ထားပြီးသားဆိုလျှင် targetLat, targetLng နှင့် destination များကို အပ်ဒိတ်လုပ်ပါ
-            if (activePassengerId === pId) {
+            if (activePassengerId === pId || !activePassengerId) {
                 targetLat = pLat;
                 targetLng = pLng;
                 if (pDestLat && pDestLng) {
                     destLat = pDestLat;
                     destLng = pDestLng;
                 }
-                
+
                 if (driverLat && driverLng && routingControl) {
                     let waypoints = [L.latLng(driverLat, driverLng), L.latLng(targetLat, targetLng)];
                     if (destLat && destLng) {
@@ -216,19 +269,19 @@ socket.on('rideAssigned', (data) => {
                 }
             }
 
-            // ခရီးသည် လက်ရှိတည်နေရာ မားကာပြသခြင်း
-            if (!passengersMarkers[pId]) {
-                var marker = L.marker([pLat, pLng]).addTo(map)
-                    .bindPopup(`<b>ခရီးသည် တည်နေရာ</b><br><span style="font-size:12px; color:gray;">Lat: ${pLat.toFixed(4)}, Lng: ${pLng.toFixed(4)}</span><br><br><button onclick="acceptSpecificRide('${pId}', ${pLat}, ${pLng}, ${pDestLat}, ${pDestLng})" style='padding:6px 12px; background:#007bff; color:white; border:none; border-radius:4px; cursor:pointer;'>ဤခရီးစဉ်ကို လက်ခံမည်</button>`);
-                passengersMarkers[pId] = marker;
-            } else {
-                passengersMarkers[pId].setLatLng([pLat, pLng]);
-                passengersMarkers[pId].setPopupContent(`<b>ခရီးသည် တည်နေရာ</b><br><span style="font-size:12px; color:gray;">Lat: ${pLat.toFixed(4)}, Lng: ${pLng.toFixed(4)}</span><br><br><button onclick="acceptSpecificRide('${pId}', ${pLat}, ${pLng}, ${pDestLat}, ${pDestLng})" style='padding:6px 12px; background:#007bff; color:white; border:none; border-radius:4px; cursor:pointer;'>ဤခရီးစဉ်ကို လက်ခံမည်</button>`);
+            if (pId) {
+                if (!passengersMarkers[pId]) {
+                    var marker = L.marker([pLat, pLng]).addTo(map)
+                        .bindPopup(`<b>ခရီးသည် တည်နေရာ</b><br><span style="font-size:12px; color:gray;">Lat: ${pLat.toFixed(4)}, Lng: ${pLng.toFixed(4)}</span><br><br><button onclick="acceptSpecificRide('${pId}', ${pLat}, ${pLng}, ${pDestLat}, ${pDestLng})" style='padding:6px 12px; background:#007bff; color:white; border:none; border-radius:4px; cursor:pointer;'>ဤခရီးစဉ်ကို လက်ခံမည်</button>`);
+                    passengersMarkers[pId] = marker;
+                } else {
+                    passengersMarkers[pId].setLatLng([pLat, pLng]);
+                    passengersMarkers[pId].setPopupContent(`<b>ခရီးသည် တည်နေရာ</b><br><span style="font-size:12px; color:gray;">Lat: ${pLat.toFixed(4)}, Lng: ${pLng.toFixed(4)}</span><br><br><button onclick="acceptSpecificRide('${pId}', ${pLat}, ${pLng}, ${pDestLat}, ${pDestLng})" style='padding:6px 12px; background:#007bff; color:white; border:none; border-radius:4px; cursor:pointer;'>ဤခရီးစဉ်ကို လက်ခံမည်</button>`);
+                }
             }
 
-            // ခရီးသည် သွားမည့်နေရာ (Destination) ရှိပါက မားကာသီးသန့်ပြသပေးခြင်း
             if (pDestLat && pDestLng) {
-                if (!destinationMarkers[pId]) {
+                if (!destinationMarkers[pId || 'dest']) {
                     var destMarker = L.marker([pDestLat, pDestLng], {
                         icon: L.icon({
                             iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
@@ -239,9 +292,9 @@ socket.on('rideAssigned', (data) => {
                             shadowSize: [41, 41]
                         })
                     }).addTo(map).bindPopup("<b>ခရီးသည် သွားမည့်နေရာ (Destination)</b>");
-                    destinationMarkers[pId] = destMarker;
+                    destinationMarkers[pId || 'dest'] = destMarker;
                 } else {
-                    destinationMarkers[pId].setLatLng([pDestLat, pDestLng]);
+                    destinationMarkers[pId || 'dest'].setLatLng([pDestLat, pDestLng]);
                 }
             }
         });
@@ -254,16 +307,18 @@ socket.on('rideAssigned', (data) => {
             destLng = pDestLng;
             arrivedAlerted = false;
 
-            // အကယ်၍ Ringtone မြည်နေပါက ရပ်တန့်ရန်
             ringtoneAudio.pause();
             ringtoneAudio.currentTime = 0;
 
-            socket.emit('acceptRide', { passengerId: passengerId, message: 'ယာဉ်မောင်းမှ သင့်ခရီးစဉ်ကို လက်ခံလိုက်ပါပြီ။' });
+            // index.html ဘက်မှ စောင့်နေသော 'rideAccepted' နှင့် 'rideCompleted' တို့နှင့် ကိုက်ညီစေရန် နှစ်မျိုးစလုံး ထုတ်လွှင့်ပေးမည်
+            socket.emit('acceptRide', { passengerId: passengerId, message: 'ယာဉ်မောင်းမှ သင့်ခရီးစဉ်ကို လက်ခံလိုက်ပါပြီ။', driverLat: driverLat, driverLng: driverLng });
+            socket.emit('rideAccepted', { passengerId: passengerId, message: 'ယာဉ်မောင်းမှ သင့်ခရီးစဉ်ကို လက်ခံလိုက်ပါပြီ။', driverLat: driverLat, driverLng: driverLng });
+
             document.getElementById('status').innerText = 'ခရီးစဉ် လက်ခံထားပါသည်။';
             document.getElementById('finish-ride-btn').style.display = 'block';
 
             if (routingControl) { map.removeControl(routingControl); }
-            
+
             if (driverLat && driverLng) {
                 let waypoints = [L.latLng(driverLat, driverLng), L.latLng(pLat, pLng)];
                 if (destLat && destLng) {
@@ -287,7 +342,11 @@ socket.on('rideAssigned', (data) => {
 
         window.finishRide = function() {
             if (activePassengerId) {
+                // index.html ဘက်မှ စောင့်နေသော rideCompleted နှင့် rideFinished တို့ကို တစ်ပါတည်း ပို့ပေးမည်
                 socket.emit('finishRide', { passengerId: activePassengerId });
+                socket.emit('rideCompleted', { passengerId: activePassengerId });
+                socket.emit('rideFinished', { passengerId: activePassengerId });
+
                 if (passengersMarkers[activePassengerId]) {
                     map.removeLayer(passengersMarkers[activePassengerId]);
                     delete passengersMarkers[activePassengerId];
@@ -323,3 +382,4 @@ socket.on('rideAssigned', (data) => {
     </script>
 </body>
 </html>
+
