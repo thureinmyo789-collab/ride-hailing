@@ -95,13 +95,14 @@
         // 🛠️ index.html နှင့် ချိတ်ဆက်ရန် လိုအပ်သော Socket Listeners များ အပြည့်အစုံ ဖြည့်စွက်ခြင်း
         // ==========================================
 
-        // ၁။ index.html ဘက်မှ 'passengerRequestRide' ဖြင့် လှမ်းခေါ်လာသောအခါ ringtoneAlert သို့ တိုက်ရိုက်ချိတ်ဆက်ပေးရန်
+                // ခရီးသည်ဘက်မှ ခေါ်ဆိုလာသောအခါ အချက်အလက်များကို လက်ခံပြသခြင်း
         socket.on('passengerRequestRide', (data) => {
-            console.log("ခရီးသည်မှ ခေါ်ဆိုမှု ရရှိပါပြီ:", data);
+            console.log("ခရီးသည် အချက်အလက် ရရှိပါပြီ:", data);
             
-            // ringtone မြည်စေရန်
-            ringtoneAudio.play().catch(e => console.log("Audio play blocked by browser:", e));
-            alert((data.passengerName || 'ခရီးသည်') + " မှ သင့်ထံသို့ ကားခေါ်ဆိုထားပါသည်။ အကြောင်းကြားစာကို လက်ခံရန် နှိပ်ပါ။");
+            ringtoneAudio.play().catch(e => console.log("Audio play blocked:", e));
+            alert((data.passengerName || 'ခရီးသည်') + " မှ သင့်ထံသို့ ကားခေါ်ဆိုထားပါသည်။");
+
+            activePassengerId = data.passengerId;
 
             // UI တွင် ဖုန်းနံပါတ်နှင့် အမည်ပြသရန်
             if(document.getElementById('passenger-phone')) {
@@ -109,26 +110,25 @@
                 document.getElementById('passenger-name').innerText = data.passengerName || 'ခရီးသည်';
             }
 
-            // ခရီးသည် တည်နေရာကို Map ပေါ်တွင် Marker ပြသခြင်းနှင့် လမ်းကြောင်းအတွက် သိမ်းဆည်းခြင်း
+            // ခရီးသည် တည်နေရာ မားကာပြသခြင်း
             if (data.lat && data.lng) {
-                var pId = data.passengerId || socket.id; // socket id သို့မဟုတ် ခရီးသည် id
                 targetLat = data.lat;
                 targetLng = data.lng;
-                destLat = data.destLat || null;
-                destLng = data.destLng || null;
 
-                if (!passengersMarkers[pId]) {
-                    var marker = L.marker([targetLat, targetLng]).addTo(map)
-                        .bindPopup(`<b>ခရီးသည်:</b> ${data.passengerName || 'Unknown'}<br><b>ဖုန်း:</b> ${data.passengerPhone || 'N/A'}`)
+                if (!passengersMarkers[data.passengerId]) {
+                    var marker = L.marker([data.lat, data.lng]).addTo(map)
+                        .bindPopup(`<b>ခရီးသည်:</b> ${data.passengerName}<br><b>ဖုန်း:</b> ${data.passengerPhone}`)
                         .openPopup();
-                    passengersMarkers[pId] = marker;
+                    passengersMarkers[data.passengerId] = marker;
                 }
-                map.setView([targetLat, targetLng], 15);
+                map.setView([data.lat, data.lng], 15);
             }
 
-            // ခရီးသည်သွားမည့်နေရာ (Destination) ရှိပါက မားကာပြရန်
+            // ခရီးသည် သွားမည့်နေရာ (Destination) မားကာပြသခြင်း
             if (data.destLat && data.destLng) {
-                if (!destinationMarkers[data.passengerId || 'dest']) {
+                destLat = data.destLat;
+                destLng = data.destLng;
+                if (!destinationMarkers[data.passengerId]) {
                     var destMarker = L.marker([data.destLat, data.destLng], {
                         icon: L.icon({
                             iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
@@ -139,15 +139,15 @@
                             shadowSize: [41, 41]
                         })
                     }).addTo(map).bindPopup("<b>ခရီးသည် သွားမည့်နေရာ (Destination)</b>");
-                    destinationMarkers[data.passengerId || 'dest'] = destMarker;
+                    destinationMarkers[data.passengerId] = destMarker;
                 }
             }
 
-            // အလိုအလျောက် သို့မဟုတ် လက်ခံရန် ပြင်ဆင်ခြင်း
-            if (data.passengerId) {
-                // အကယ်၍ အလိုအလျောက် လက်ခံချင်ပါက acceptSpecificRide ကို ခေါ်နိုင်သည်၊ သို့မဟုတ် ringtone ဖြင့် စောင့်ဆိုင်းစေနိုင်သည်
-            }
+            document.getElementById('finish-ride-btn').style.display = 'block';
+            document.getElementById('status').innerText = 'ခရီးသည် ခေါ်ဆိုထားပါသည်။';
         });
+
+         
 
         // ၂။ index.html တွင် index.html ဖက်က 'rideAccepted' သို့မဟုတ် 'rideAssigned' ကို စောင့်နေသဖြင့် နှစ်ခုစလုံးကို တုံ့ပြန်နိုင်ရန်
         socket.on('rideAssigned', (data) => {
